@@ -106,9 +106,12 @@ class Deck():
 
     def cut(self):
         cut_point = random.randrange(len(self))
-        top = self.cards[:cut_point]
-        bottom = self.cards[cut_point:]
-        self._cards = bottom + top
+        bottom = self.cards[:cut_point]
+        top = self.cards[cut_point:]
+        self._cards = top + bottom
 
-    def draw(self):
-        return self.cards.pop()
+    def draw(self) -> Card:
+        return self._cards.pop()
+
+    def return_cards(self, cards : list):
+        self._cards.extend(cards)
