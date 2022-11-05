@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 from scoring import Hand, PeggingPile
 from card import Card
 import random
+import itertools
 
 
 
@@ -33,7 +34,7 @@ class Player(metaclass=ABCMeta):
         """
         self._score += points
 
-    def get_cards(self, cards : list):
+    def get_cards(self, cards : list[Card]):
         """
         Add cards to the hand
         """
@@ -48,36 +49,58 @@ class Player(metaclass=ABCMeta):
         return cards_in_hand
 
     @abstractmethod
-    def select_discards(self, dealer : int=0, opp_score : int=0) -> list:
-        """
-        Select cards to place in the crib.
-        """
-        pass
-
-    @abstractmethod
-    def select_peg_card(self, opp_score : int=0, pegging_pile : PeggingPile=None) -> Card:
+    def select_peg_card(self, pegging_pile : PeggingPile, opp_score : int=0) -> Card:
         """
         Select card to play into the pegging pile
+        """
+        ### If no cards can be played into the pile, return a RuntimeError
+        card_can_be_played = False
+        for card in self.hand.cards:
+            if card.value + pegging_pile.current_total <= 31:
+                card_can_be_played = True
+
+        if not card_can_be_played:
+            raise RuntimeError("Go. Can't play any cards.")
+
+            
+
+    @abstractmethod
+    def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
+        """
+        Select cards to place in the crib.
         """
         pass
 
 
 
 class RandomPlayer(Player):
-    def select_discards(self, dealer : int=0, opp_score : int=0) -> list:
+    """
+    A completely random player that selects discards and pegging cards at random.
+    """
+    def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
         cards_to_discard = random.sample(self.hand.cards, 2)
         self._hand.discard(cards_to_discard)
         return cards_to_discard
 
-    def select_peg_card(self, opp_score : int=0, pegging_pile : PeggingPile = None) -> Card:
+    def select_peg_card(self, pegging_pile : PeggingPile, opp_score : int=0) -> Card:
+        ### First, make sure we can play a card
+        super().select_peg_card(pegging_pile)
+        ### Select a random card until you pick a card that can be played
         card_to_play = random.choice(self.hand.cards)
-        self._hand.discard([card_to_play])
+        while card_to_play.value + pegging_pile.current_total > 31:
+            card_to_play = random.choice(self.hand.cards)
+        
+        ### Discard that card from hand and return it
+        self.hand.discard([card_to_play])
         return card_to_play
 
 
 
 class HumanPlayer(Player):
-    def present_cards_for_selection(self, num_cards : int=1):
+    """
+    Player representing a human player. Also handles asking users for input.
+    """
+    def _present_cards_for_selection(self, num_cards : int=1):
         """
         Text representation of the hand for the user to select cards to play/discard
         """
@@ -100,9 +123,59 @@ class HumanPlayer(Player):
         self._hand.discard(selected_cards)
         return selected_cards
 
-    def select_discards(self, dealer : int=0, opp_score : int=0) -> list:
-        return self.present_cards_for_selection(2)
+    def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
+        return self._present_cards_for_selection(2)
 
     def select_peg_card(self, opp_score : int=0, pegging_pile : PeggingPile=None) -> Card:
-        return self.present_cards_for_selection(1)
+        super().select_peg_card(pegging_pile)
+        return self._present_cards_for_selection(1)
+
+
+
+class NaivePlayer(Player):
+    """
+    A naive player that selects the card that will net them the most points in the moment without searching.
+    """
+    def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
+        highest_score = 0
+        selected_discards = []
+        ### Create every possible combination of discards
+        for combination in list(itertools.combinations(self.hand.cards, 2)):
+            ### Create a hand with the current combination discarded
+            combination = list(combination)
+            scoring_hand = Hand(self.hand.cards)
+            scoring_hand.discard(combination)
+            ### When the new hand's score is higher than the recorded highest score, select these discards
+            if highest_score <= scoring_hand.score:
+                highest_score = scoring_hand.score
+                selected_discards = combination
+
+        return selected_discards
+
+    def select_peg_card(self, pegging_pile: PeggingPile, opp_score: int=0) -> Card:
+        super().select_peg_card(pegging_pile)
+        ### If no pegging pile was passed, raise an error
+        if pegging_pile == None:
+            raise ValueError("You need to pass a pegging pile for this agent to make a decision!")
+        highest_score = 0
+        selected_card = None
+
+        ### For every card, create a new pegging pile containing the current cards in play and add the new card
+        for card in self.hand.cards:
+            temp_pile = PeggingPile(pegging_pile.cards_in_play)
+            ### If the new card added sends back an error, it means that card can't be played
+            try:
+                temp_score = temp_pile.add_to_play(card)
+            except ValueError:
+                ### Can't play this card, set the temp score to less than 0
+                temp_score = -1
+            
+            ### Check the new score
+            if highest_score <= temp_score:
+                highest_score = temp_pile.score
+                selected_card = card
+
+        return selected_card
+
+
 
