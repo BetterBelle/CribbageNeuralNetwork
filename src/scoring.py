@@ -1,8 +1,10 @@
-from card import Card, Face, Suit
+from card import Card, Face
 import itertools
 
+
+
 class Hand():
-    def __init__(self, cards=list):
+    def __init__(self, cards=[]):
         self._cards = cards
 
     def __str__(self) -> str:
@@ -68,14 +70,11 @@ class Hand():
 
     def _score_nob(self) -> int:
         score = 0
-        ### If we have a 5 card hand that means we score a nob
+        ### If we have a 5 card hand that means we can score a nob, last card is startcard
         if len(self.cards) == 5:
-            startcard = self.cards[-1]
             for card in self.cards[:-1]:
-                if card.face == Face.JACK:
-                    if card.suit == startcard.suit:
-                        score += 1
-        
+                if card.face == Face.JACK and card.suit == self.cards[-1].suit:
+                    score += 1
         return score
 
     @property
@@ -99,6 +98,7 @@ class Hand():
 
     def add_cards(self, cards : list):
         self._cards.extend(cards)
+
 
 
 class PeggingPile():

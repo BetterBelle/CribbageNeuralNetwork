@@ -37,6 +37,8 @@ class Card():
 
     def __lt__(self, other) -> bool:
         if type(other) == Card:
+            if self.value == other.value:
+                return self.suit.value['value'] < other.suit.value['value']
             return self.value < other.value
         elif type(other) == int:
             return self.value < other
@@ -45,6 +47,8 @@ class Card():
 
     def __gt__(self, other) -> bool:
         if type(other) == Card:
+            if self.value == other.value:
+                return self.suit.value['value'] > other.suit.value['value']
             return self.value > other.value
         elif type(other) == int:
             return self.value > other
