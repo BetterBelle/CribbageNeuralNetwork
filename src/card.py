@@ -97,10 +97,16 @@ class Card():
 
     @property
     def face(self) -> Face:
+        """
+        Returns the face of the card
+        """
         return self._face
 
     @property
     def suit(self) -> Suit:
+        """
+        Returns the suit of the card
+        """
         return self._suit
 
     @property
@@ -129,10 +135,16 @@ class Deck():
         return len(self.cards)
         
     @property
-    def cards(self) -> list:
+    def cards(self) -> list[Card]:
+        """
+        Return the list of cards in the deck
+        """
         return self._cards
 
     def shuffle(self):
+        """
+        Shuffles the cards
+        """
         random.shuffle(self.cards)
 
     def cut(self):
@@ -148,10 +160,10 @@ class Deck():
         """
         Deals the top card of the deck (last element in list). Removes it from the deck and returns it.
         """
-        return self._cards.pop()
+        return self.cards.pop()
 
-    def return_cards_to_deck(self, cards : list):
+    def return_cards_to_deck(self, cards : list[Card]):
         """
         Given a list of cards, adds those cards to the deck
         """
-        self._cards.extend(cards)
+        self.cards.extend(cards)

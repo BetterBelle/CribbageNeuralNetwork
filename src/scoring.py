@@ -4,7 +4,7 @@ import itertools
 
 
 class Hand():
-    def __init__(self, cards=None):
+    def __init__(self, cards : list[Card]=None):
         self._cards = list() if cards == None else cards
 
     def __str__(self) -> str:
@@ -17,6 +17,9 @@ class Hand():
         return str(self)
 
     def _score_fifteens(self) -> int:
+        """
+        Scores all possible combinations summing to 15 in the hand
+        """
         score = 0
         for n in range(1, len(self.cards) + 1):
             for combination in list(itertools.combinations(self.cards, n)):
@@ -25,6 +28,9 @@ class Hand():
         return score
 
     def _score_pairs(self) -> int:
+        """
+        Scores all possible combinations of a pair in the hand
+        """
         score = 0
         for combination in list(itertools.combinations(self.cards, 2)):
             if combination[0] == combination[1]:
@@ -32,28 +38,41 @@ class Hand():
         return score
 
     def _score_runs(self) -> int:
+        """
+        Scores any runs in the hand
+        """
         self._cards.sort()
         score = 0
-        ### Runs of four
-        for combination in list(itertools.combinations(self.cards, 4)):
-            combination = list(combination)
-            combination.sort()
-            if (combination[-1] - len(combination) + 1 == combination[0]):
-                score += 4
+        ### Runs of five
+        if len(self.cards) == 5:
+            if (self.cards[-1] - len(self.cards) + 1 == self.cards[0]):
+                score += 5
 
-        ### If you scored runs of 4, you won't have any runs of 3
-        if score > 0:
-            return score
-        ### Runs of three
-        for combination in list(itertools.combinations(self.cards, 3)):
-            combination = list(combination)
-            combination.sort()
-            if (combination[-1] - len(combination) + 1 == combination[0]):
-                score += 3
+        ### If you scored a run of 5, you won't have runs of 3 or 4
+        if score == 0:
+            ### Runs of four
+            for combination in list(itertools.combinations(self.cards, 4)):
+                combination = list(combination)
+                combination.sort()
+                if (combination[-1] - len(combination) + 1 == combination[0]):
+                    score += 4
+
+        ### If you scored runs of 4 or 5, you won't have any runs of 3
+        if score == 0:
+            ### Runs of three
+            for combination in list(itertools.combinations(self.cards, 3)):
+                combination = list(combination)
+                combination.sort()
+                if (combination[-1] - len(combination) + 1 == combination[0]):
+                    score += 3
 
         return score
 
     def _score_flush(self) -> int:
+        """
+        Scores flushes in hand, including the rule for a start card, wherein if the start card matches the suit of all cards in hand you get
+        5 points instead of just 4, but it doesn't count if you get a flush of 4 with the start card. 
+        """
         score = 0
         suits = [card.suit.value['value'] for card in self.cards]
         ### If we have a 5 card hand that means we're including start card
@@ -69,6 +88,9 @@ class Hand():
         return score
 
     def _score_nob(self) -> int:
+        """
+        Scores a nob; if the hand contains a Jack and it's suit matches the top card (only if the hand is size 5)
+        """
         score = 0
         ### If we have a 5 card hand that means we can score a nob, last card is startcard
         if len(self.cards) == 5:
@@ -79,6 +101,9 @@ class Hand():
 
     @property
     def score(self) -> int:
+        """
+        Return the score of the hand
+        """
         ### Fully score a hand
         score = 0
         score += self._score_fifteens()
@@ -89,21 +114,30 @@ class Hand():
         return score
 
     @property
-    def cards(self) -> list:
+    def cards(self) -> list[Card]:
+        """
+        Returns the list of cards in the hand.
+        """
         return self._cards
             
-    def discard(self, cards : list):
+    def discard(self, cards : list[Card]):
+        """
+        Removes the cards passed in from the hand
+        """
         for card in cards:
             self._cards.remove(card)
 
-    def add_cards(self, cards : list):
+    def add_cards(self, cards : list[Card]):
+        """
+        Adds the cards passed in to the hand
+        """
         self._cards.extend(cards)
 
 
 
 class PeggingPile():
-    def __init__(self, cards=[]):
-        self._cards_in_play = cards
+    def __init__(self, cards : list[Card]=None):
+        self._cards_in_play = list() if cards == None else cards
         self._dead_cards = []
 
     def __str__(self) -> str:
@@ -119,13 +153,19 @@ class PeggingPile():
     def __repr__(self):
         return str(self)
 
-    def _score_value(self, value) -> int:
+    def _score_value(self, value : int) -> int:
+        """
+        Scores two points if the current pegging piles score is equal to it. This is used for scoring 15s and the 31
+        """
         score = 0
         if self.current_total == value:
             score += 2
         return score
 
     def _n_of_a_kind(self) -> int:
+        """
+        Scores 4 of a kinds, 3 of a kinds and pairs. 
+        """
         score = 0
         ### Four of a kind
         if len(self.cards_in_play) >= 4:
@@ -149,6 +189,9 @@ class PeggingPile():
         return score
 
     def _score_runs(self) -> int:
+        """
+        Scores runs up to 10 cards
+        """
         ### Not sure what the maximum amount of cards can be in play where a long straight is possible, but will assume it's 10
         score = 0
         for i in range(10, 1, -1):
@@ -161,15 +204,24 @@ class PeggingPile():
         return score
         
     @property
-    def cards_in_play(self) -> list:
+    def cards_in_play(self) -> list[Card]:
+        """
+        Returns the list of cards currently in play
+        """
         return self._cards_in_play
 
     @property
-    def dead_cards(self) -> list:
+    def dead_cards(self) -> list[Card]:
+        """
+        Returns the list of cards currently not in play
+        """
         return self._dead_cards
 
     @property
     def current_total(self) -> int:
+        """
+        Returns the current value of the pegging pile, for purposes of keeping track if the score has reached 31
+        """
         stack_total = 0
         for card in self.cards_in_play:
             stack_total += card.value
@@ -177,6 +229,9 @@ class PeggingPile():
 
     @property
     def score(self) -> int:
+        """
+        Returns the score of the pegging pile
+        """
         score = 0
         score += self._n_of_a_kind()
         score += self._score_value(15)
@@ -185,6 +240,9 @@ class PeggingPile():
         return score
 
     def end_current_play(self):
+        """
+        Sends all current cards in play to the pile of cards not in play
+        """
         self._dead_cards.extend(self.cards_in_play)
         self._cards_in_play = []
 
@@ -202,3 +260,10 @@ class PeggingPile():
             self.end_current_play()
 
         return score
+
+    def clear_pile(self):
+        """
+        Wipes both the cards in play and not in play back to empty
+        """
+        self._dead_cards = []
+        self._cards_in_play = []
