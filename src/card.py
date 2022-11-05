@@ -28,6 +28,68 @@ class Card():
     def __init__(self, face : Face, suit : Suit):
         self._face = face
         self._suit = suit
+    
+    def __str__(self) -> str:
+        return str(self.face.value['symbol']) + str(self.suit.value['symbol'])
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    def __lt__(self, other) -> bool:
+        if type(other) == Card:
+            return self.value < other.value
+        elif type(other) == int:
+            return self.value < other
+        else:
+            raise NotImplementedError()
+
+    def __gt__(self, other) -> bool:
+        if type(other) == Card:
+            return self.value > other.value
+        elif type(other) == int:
+            return self.value > other
+        else:
+            raise NotImplementedError()
+
+    def __eq__(self, other) -> bool:
+        if type(other) == Card:
+            return self.face == other.face
+        elif type(other) == int:
+            return self.value == other
+        else:
+            raise NotImplementedError
+
+    def __add__(self, other) -> int:
+        if type(other) == Card:
+            return self.value + other.value
+        elif type(other) == int:
+            return self.value + other
+        else:
+            raise NotImplementedError
+    
+    def __radd__(self, other) -> int:
+        if type(other) == Card:
+            return self.value + other.value
+        elif type(other) == int:
+            return self.value + other
+        else:
+            raise NotImplementedError
+
+    def __sub__(self, other) -> int:
+        if type(other) == Card:
+            return self.value - other.value
+        elif type(other) == int:
+            return self.value - other
+        else:
+            raise NotImplementedError
+
+    def __rsub__(self, other) -> int:
+        if type(other) == Card:
+            return self.value - other.value
+        elif type(other) == int:
+            return self.value - other
+        else:
+            raise NotImplementedError
 
     @property
     def face(self) -> Face:
@@ -39,45 +101,10 @@ class Card():
 
     @property
     def value(self) -> int:
+        """
+        Get the card's value in cribbage
+        """
         return self.face.value['value']
-    
-    def __str__(self) -> str:
-        return str(self.face.value['symbol']) + str(self.suit.value['symbol'])
-
-    def __repr__(self) -> str:
-        return str(self)
-
-    def __lt__(self, other):
-        if type(other) == Card:
-            return self.value < other.value
-        elif type(other) == int:
-            return self.value < other
-        else:
-            raise NotImplementedError()
-
-    def __gt__(self, other):
-        if type(other) == Card:
-            return self.value > other.value
-        elif type(other) == int:
-            return self.value > other
-        else:
-            raise NotImplementedError()
-
-    def __eq__(self, other):
-        if type(other) == Card:
-            return self.face == other.face
-        elif type(other) == int:
-            return self.value == other
-        else:
-            raise NotImplementedError
-
-    def __add__(self, other):
-        if type(other) == Card:
-            return self.value + other.value
-        elif type(other) == int:
-            return self.value + other
-        else:
-            raise NotImplementedError
 
 
 
@@ -88,10 +115,6 @@ class Deck():
             for face in Face:
                 self.cards.append(Card(face, suit))
 
-    @property
-    def cards(self) -> list:
-        return self._cards
-
     def __str__(self) -> str:
         s = '[ '
         for card in self.cards:
@@ -100,18 +123,31 @@ class Deck():
 
     def __len__(self) -> int:
         return len(self.cards)
+        
+    @property
+    def cards(self) -> list:
+        return self._cards
 
     def shuffle(self):
         random.shuffle(self.cards)
 
     def cut(self):
+        """
+        Cut the deck in half, put the bottom of the deck on top
+        """
         cut_point = random.randrange(len(self))
         bottom = self.cards[:cut_point]
         top = self.cards[cut_point:]
         self._cards = top + bottom
 
-    def draw(self) -> Card:
+    def deal_card(self) -> Card:
+        """
+        Deals the top card of the deck (last element in list). Removes it from the deck and returns it.
+        """
         return self._cards.pop()
 
-    def return_cards(self, cards : list):
+    def return_cards_to_deck(self, cards : list):
+        """
+        Given a list of cards, adds those cards to the deck
+        """
         self._cards.extend(cards)
