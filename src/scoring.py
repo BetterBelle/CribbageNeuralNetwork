@@ -125,13 +125,13 @@ class Hand():
         Removes the cards passed in from the hand
         """
         for card in cards:
-            self._cards.remove(card)
+            self.cards.remove(card)
 
     def add_cards(self, cards : list[Card]):
         """
         Adds the cards passed in to the hand
         """
-        self._cards.extend(cards)
+        self.cards.extend(cards)
 
 
 
@@ -261,9 +261,11 @@ class PeggingPile():
 
         return score
 
-    def clear_pile(self):
+    def end_pegging(self) -> list[Card]:
         """
-        Wipes both the cards in play and not in play back to empty
+        Sends all cards to the dead pile, wipes the dead pile and returns the cards that were dead.
         """
-        self._dead_cards = []
-        self._cards_in_play = []
+        self.end_current_play()
+        dead_cards = self.dead_cards
+        self.dead_cards.clear()
+        return dead_cards

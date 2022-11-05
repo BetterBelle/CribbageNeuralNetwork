@@ -40,12 +40,12 @@ class Player(metaclass=ABCMeta):
         """
         self._hand.add_cards(cards)
 
-    def clear_hand(self):
+    def clear_hand(self) -> list[Card]:
         """
         Function that clears the hand and returns all the cards that were in hand
         """
-        cards_in_hand = self.hand
-        self.hand.discard(self.hand)
+        cards_in_hand = self.hand.cards
+        self.hand.cards.clear()
         return cards_in_hand
 
     @abstractmethod
@@ -79,7 +79,7 @@ class RandomPlayer(Player):
     """
     def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
         cards_to_discard = random.sample(self.hand.cards, 2)
-        self._hand.discard(cards_to_discard)
+        self.hand.discard(cards_to_discard)
         return cards_to_discard
 
     def select_peg_card(self, pegging_pile : PeggingPile, opp_score : int=0) -> Card:
@@ -120,7 +120,7 @@ class HumanPlayer(Player):
                 else:
                     selected_cards.append(self.hand.cards[i-1])
 
-        self._hand.discard(selected_cards)
+        self.hand.discard(selected_cards)
         return selected_cards
 
     def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:

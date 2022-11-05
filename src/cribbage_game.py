@@ -91,8 +91,9 @@ class CribbageGame():
         """
         self.deck.return_cards_to_deck(self.player_one.clear_hand())
         self.deck.return_cards_to_deck(self.player_two.clear_hand())
-        self.deck.return_cards_to_deck(self.crib)
-        self.crib.discard(self.crib)
+        self.deck.return_cards_to_deck(self.crib.cards)
+        self.deck.return_cards_to_deck(self.pegging_pile.end_pegging())
+        self.crib.discard(self.crib.cards)
         self._turn = self._dealer
         self._dealer = (self._dealer + 1) % 2
         
