@@ -120,7 +120,7 @@ class Deck():
                 self.cards.append(Card(face, suit))
 
     def __str__(self) -> str:
-        s = '[ '
+        s = '[Deck: '
         for card in self.cards:
             s += (str(card) + ' ')
         return s + ']'

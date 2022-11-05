@@ -4,11 +4,11 @@ import itertools
 
 
 class Hand():
-    def __init__(self, cards=[]):
-        self._cards = cards
+    def __init__(self, cards=None):
+        self._cards = list() if cards == None else cards
 
     def __str__(self) -> str:
-        s = '[ '
+        s = '[Hand: '
         for card in self.cards:
             s += str(card) + ' '
         return s + ']'

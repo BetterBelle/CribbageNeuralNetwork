@@ -27,7 +27,7 @@ class Player(metaclass=ABCMeta):
     def score(self) -> int:
         return self._score
 
-    def score_points(self, points):
+    def score_points(self, points : int):
         """
         Increase score by given amount of points
         """
@@ -48,36 +48,36 @@ class Player(metaclass=ABCMeta):
         return cards_in_hand
 
     @abstractmethod
-    def select_discards(self, dealer=0, opp_score=0, top_card : Card=None) -> list:
+    def select_discards(self, dealer : int=0, opp_score : int=0) -> list:
         """
         Select cards to place in the crib.
         """
-        raise NotImplementedError()
+        pass
 
     @abstractmethod
-    def select_peg_card(self, opp_score=0, pegging_pile : PeggingPile = None) -> Card:
+    def select_peg_card(self, opp_score : int=0, pegging_pile : PeggingPile=None) -> Card:
         """
         Select card to play into the pegging pile
         """
-        raise NotImplementedError()
+        pass
 
 
 
 class RandomPlayer(Player):
-    def select_discards(self, dealer=0, opp_score=0) -> list:
-        cards_to_discard = random.sample(self.hand, 2)
+    def select_discards(self, dealer : int=0, opp_score : int=0) -> list:
+        cards_to_discard = random.sample(self.hand.cards, 2)
         self._hand.discard(cards_to_discard)
         return cards_to_discard
 
-    def select_peg_card(self, opp_score=0, pegging_pile : PeggingPile = None) -> Card:
-        card_to_play = random.choice(self.hand)
+    def select_peg_card(self, opp_score : int=0, pegging_pile : PeggingPile = None) -> Card:
+        card_to_play = random.choice(self.hand.cards)
         self._hand.discard([card_to_play])
         return card_to_play
 
 
 
 class HumanPlayer(Player):
-    def present_cards_for_selection(self, num_cards=1):
+    def present_cards_for_selection(self, num_cards : int=1):
         """
         Text representation of the hand for the user to select cards to play/discard
         """
@@ -100,9 +100,9 @@ class HumanPlayer(Player):
         self._hand.discard(selected_cards)
         return selected_cards
 
-    def select_discards(self, dealer=0, opp_score=0, top_card : Card=None) -> list:
+    def select_discards(self, dealer : int=0, opp_score : int=0) -> list:
         return self.present_cards_for_selection(2)
 
-    def select_peg_card(self, opp_score=0, pegging_pile : PeggingPile=None) -> Card:
+    def select_peg_card(self, opp_score : int=0, pegging_pile : PeggingPile=None) -> Card:
         return self.present_cards_for_selection(1)
 
