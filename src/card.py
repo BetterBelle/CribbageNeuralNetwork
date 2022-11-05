@@ -37,21 +37,21 @@ class Card():
 
     def __lt__(self, other) -> bool:
         if type(other) == Card:
-            if self.value == other.value:
+            if self == other:
                 return self.suit.value['value'] < other.suit.value['value']
-            return self.value < other.value
+            return self.rank < other.rank
         elif type(other) == int:
-            return self.value < other
+            return self.rank < other
         else:
             raise NotImplementedError()
 
     def __gt__(self, other) -> bool:
         if type(other) == Card:
-            if self.value == other.value:
+            if self == other:
                 return self.suit.value['value'] > other.suit.value['value']
-            return self.value > other.value
+            return self.rank > other.rank
         elif type(other) == int:
-            return self.value > other
+            return self.rank > other
         else:
             raise NotImplementedError()
 
@@ -59,7 +59,7 @@ class Card():
         if type(other) == Card:
             return self.face == other.face
         elif type(other) == int:
-            return self.value == other
+            return self.rank == other
         else:
             raise NotImplementedError
 
@@ -115,6 +115,13 @@ class Card():
         Get the card's value in cribbage
         """
         return self.face.value['value']
+
+    @property
+    def rank(self) -> int:
+        """
+        Get the card's face's rank
+        """
+        return self.face.value['rank']
 
 
 
