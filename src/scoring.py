@@ -1,4 +1,4 @@
-from card import Card, Face
+from card import Card, Face, Suit
 import itertools
 
 class Hand():
@@ -29,7 +29,7 @@ class Hand():
                 score += 2
         return score
 
-    def _score_straights(self) -> int:
+    def _score_runs(self) -> int:
         self._cards.sort()
         score = 0
         ### Runs of four
@@ -85,7 +85,7 @@ class Hand():
         score += self._score_fifteens()
         score += self._score_flush()
         score += self._score_pairs()
-        score += self._score_straights()
+        score += self._score_runs()
         score += self._score_nob()
         return score
 
@@ -105,7 +105,6 @@ class PeggingPile():
     def __init__(self, cards=[]):
         self._cards_in_play = cards
         self._dead_cards = []
-        self._stack_total = 0
 
     def __str__(self) -> str:
         s = '[\n\tCards In Play: '
@@ -120,18 +119,86 @@ class PeggingPile():
     def __repr__(self):
         return str(self)
 
+    def _score_value(self, value) -> int:
+        score = 0
+        if self.current_total == value:
+            score += 2
+        return score
+
+    def _n_of_a_kind(self) -> int:
+        score = 0
+        ### Four of a kind
+        if len(self.cards_in_play) >= 4:
+            set_of_values = set([card.value for card in self.cards_in_play[-4:]])
+            ### They all have the same values
+            if len(set_of_values) == 1:
+                score += 12
+        ### Three of a kind, if we've scored a 4 of a kind, we ignore
+        if len(self.cards_in_play) >= 3 and score == 0:
+            set_of_values = set([card.value for card in self.cards_in_play[-3:]])
+            ### They all have the same values
+            if len(set_of_values) == 1:
+                score += 6
+        ### Pair, if we've score either 3 or 4 of a kind, we ignore
+        if len(self.cards_in_play) >= 2 and score == 0:
+            set_of_values = set([card.value for card in self.cards_in_play[-2:]])
+            ### They all have the same values
+            if len(set_of_values) == 1:
+                score += 2
+
+        return score
+
+    def _score_runs(self) -> int:
+        ### Not sure what the maximum amount of cards can be in play where a long straight is possible, but will assume it's 10
+        score = 0
+        for i in range(10, 1, -1):
+            ### If you've already scored, that means you've gotten the maximum amount of points for your run, so just keep iterating
+            if len(self.cards_in_play) >= i and score == 0:
+                check_cards = sorted(self.cards_in_play)
+                if (check_cards[-1] - len(check_cards) + 1 == check_cards[0]):
+                    score += i
+
+        return score
+        
     @property
-    def cards_in_play(self):
+    def cards_in_play(self) -> list:
         return self._cards_in_play
 
     @property
-    def dead_cards(self):
+    def dead_cards(self) -> list:
         return self._dead_cards
 
     @property
-    def current_total(self):
-        return self._stack_total
+    def current_total(self) -> int:
+        stack_total = 0
+        for card in self.cards_in_play:
+            stack_total += card.value
+        return stack_total
 
-    def add_to_play(self, card):
+    @property
+    def score(self) -> int:
+        score = 0
+        score += self._n_of_a_kind()
+        score += self._score_value(15)
+        score += self._score_value(31)
+        score += self._score_runs()
+        return score
+
+    def end_current_play(self):
+        self._dead_cards.extend(self.cards_in_play)
+        self._cards_in_play = []
+
+    def add_to_play(self, card : Card) -> int:
+        """
+        Add a card to play and return the score of the new pile.
+        Then, if the total is 31, send all cards to the dead card pile
+        """
         if card.value + self.current_total > 31:
             raise ValueError("You cannot play that card! Please select another card.")
+
+        score = self.score
+
+        if self.current_total == 31:
+            self.end_current_play()
+
+        return score
