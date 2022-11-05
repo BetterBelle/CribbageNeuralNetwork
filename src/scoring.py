@@ -45,7 +45,7 @@ class Hand():
         score = 0
         ### Runs of five
         if len(self.cards) == 5:
-            if (self.cards[-1] - len(self.cards) + 1 == self.cards[0]):
+            if self.cards[-1].rank - len(self.cards) + 1 == self.cards[0].rank:
                 score += 5
 
         ### If you scored a run of 5, you won't have runs of 3 or 4
@@ -54,7 +54,7 @@ class Hand():
             for combination in list(itertools.combinations(self.cards, 4)):
                 combination = list(combination)
                 combination.sort()
-                if (combination[-1] - len(combination) + 1 == combination[0]):
+                if combination[-1].rank - len(combination) + 1 == combination[0].rank:
                     score += 4
 
         ### If you scored runs of 4 or 5, you won't have any runs of 3
@@ -63,7 +63,7 @@ class Hand():
             for combination in list(itertools.combinations(self.cards, 3)):
                 combination = list(combination)
                 combination.sort()
-                if (combination[-1] - len(combination) + 1 == combination[0]):
+                if (combination[-1].rank - len(combination) + 1 == combination[0].rank):
                     score += 3
 
         return score
@@ -169,21 +169,21 @@ class PeggingPile():
         score = 0
         ### Four of a kind
         if len(self.cards_in_play) >= 4:
-            set_of_values = set([card.value for card in self.cards_in_play[-4:]])
+            set_of_faces = set([card.face for card in self.cards_in_play[-4:]])
             ### They all have the same values
-            if len(set_of_values) == 1:
+            if len(set_of_faces) == 1:
                 score += 12
         ### Three of a kind, if we've scored a 4 of a kind, we ignore
         if len(self.cards_in_play) >= 3 and score == 0:
-            set_of_values = set([card.value for card in self.cards_in_play[-3:]])
+            set_of_faces = set([card.face for card in self.cards_in_play[-3:]])
             ### They all have the same values
-            if len(set_of_values) == 1:
+            if len(set_of_faces) == 1:
                 score += 6
         ### Pair, if we've score either 3 or 4 of a kind, we ignore
         if len(self.cards_in_play) >= 2 and score == 0:
-            set_of_values = set([card.value for card in self.cards_in_play[-2:]])
+            set_of_faces = set([card.face for card in self.cards_in_play[-2:]])
             ### They all have the same values
-            if len(set_of_values) == 1:
+            if len(set_of_faces) == 1:
                 score += 2
 
         return score
@@ -198,7 +198,7 @@ class PeggingPile():
             ### If you've already scored, that means you've gotten the maximum amount of points for your run, so just keep iterating
             if len(self.cards_in_play) >= i and score == 0:
                 check_cards = sorted(self.cards_in_play)
-                if (check_cards[-1] - len(check_cards) + 1 == check_cards[0]):
+                if (check_cards[-1].rank - len(check_cards) + 1 == check_cards[0].rank):
                     score += i
 
         return score
@@ -224,7 +224,7 @@ class PeggingPile():
         """
         stack_total = 0
         for card in self.cards_in_play:
-            stack_total += card.value
+            stack_total += card
         return stack_total
 
     @property
