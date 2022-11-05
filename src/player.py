@@ -1,8 +1,7 @@
 from abc import ABCMeta, abstractmethod
-from scoring import Hand
-from card import Card, Deck
+from scoring import Hand, PeggingPile
+from card import Card
 import random
-import tensorflow as tf
 
 
 
@@ -28,18 +27,35 @@ class Player(metaclass=ABCMeta):
     def score(self) -> int:
         return self._score
 
+    def score_points(self, points):
+        """
+        Increase score by given amount of points
+        """
+        self._score += points
+
     def get_cards(self, cards : list):
+        """
+        Add cards to the hand
+        """
         self._hand.add_cards(cards)
 
+    def clear_hand(self):
+        """
+        Function that clears the hand and returns all the cards that were in hand
+        """
+        cards_in_hand = self.hand
+        self.hand.discard(self.hand)
+        return cards_in_hand
+
     @abstractmethod
-    def select_discards(self) -> list:
+    def select_discards(self, dealer=0, opp_score=0, top_card : Card=None) -> list:
         """
         Select cards to place in the crib.
         """
         raise NotImplementedError()
 
     @abstractmethod
-    def select_peg_card(self) -> Card:
+    def select_peg_card(self, opp_score=0, pegging_pile : PeggingPile = None) -> Card:
         """
         Select card to play into the pegging pile
         """
@@ -48,12 +64,12 @@ class Player(metaclass=ABCMeta):
 
 
 class RandomPlayer(Player):
-    def select_discards(self) -> list:
+    def select_discards(self, dealer=0, opp_score=0) -> list:
         cards_to_discard = random.sample(self.hand, 2)
         self._hand.discard(cards_to_discard)
         return cards_to_discard
 
-    def select_peg_card(self) -> Card:
+    def select_peg_card(self, opp_score=0, pegging_pile : PeggingPile = None) -> Card:
         card_to_play = random.choice(self.hand)
         self._hand.discard([card_to_play])
         return card_to_play
@@ -84,9 +100,9 @@ class HumanPlayer(Player):
         self._hand.discard(selected_cards)
         return selected_cards
 
-    def select_discards(self) -> list:
+    def select_discards(self, dealer=0, opp_score=0, top_card : Card=None) -> list:
         return self.present_cards_for_selection(2)
 
-    def select_peg_card(self) -> Card:
+    def select_peg_card(self, opp_score=0, pegging_pile : PeggingPile=None) -> Card:
         return self.present_cards_for_selection(1)
 
