@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from scoring import Hand, PeggingPile
 from card import Card
+import tensorflow as tf
 import random
 import itertools
 
@@ -34,6 +35,9 @@ class Player(metaclass=ABCMeta):
         """
         self._score += points
 
+    def score_hand(self):
+        self.score_points(self.hand.score)
+
     def get_cards(self, cards : list[Card]):
         """
         Add cards to the hand
@@ -62,8 +66,6 @@ class Player(metaclass=ABCMeta):
         if not card_can_be_played:
             raise RuntimeError("Go. Can't play any cards.")
 
-            
-
     @abstractmethod
     def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
         """
@@ -77,6 +79,9 @@ class RandomPlayer(Player):
     """
     A completely random player that selects discards and pegging cards at random.
     """
+    def __init__(self, name='Random Player'):
+        super().__init__(name)
+
     def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
         cards_to_discard = random.sample(self.hand.cards, 2)
         self.hand.discard(cards_to_discard)
@@ -100,7 +105,10 @@ class HumanPlayer(Player):
     """
     Player representing a human player. Also handles asking users for input.
     """
-    def _present_cards_for_selection(self, num_cards : int=1):
+    def __init__(self, name='Human Player'):
+        super().__init__(name)
+
+    def _present_cards_for_selection(self, num_cards : int=1) -> list[Card]:
         """
         Text representation of the hand for the user to select cards to play/discard
         """
@@ -126,7 +134,7 @@ class HumanPlayer(Player):
     def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
         return self._present_cards_for_selection(2)
 
-    def select_peg_card(self, opp_score : int=0, pegging_pile : PeggingPile=None) -> Card:
+    def select_peg_card(self, opp_score : int=0, pegging_pile : PeggingPile=None) -> list[Card]:
         super().select_peg_card(pegging_pile)
         return self._present_cards_for_selection(1)
 
@@ -136,6 +144,10 @@ class NaivePlayer(Player):
     """
     A naive player that selects the card that will net them the most points in the moment without searching.
     """
+
+    def __init__(self, name='Naive Player'):
+        super().__init__(name)
+    
     def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
         highest_score = 0
         selected_discards = []
@@ -152,7 +164,7 @@ class NaivePlayer(Player):
 
         return selected_discards
 
-    def select_peg_card(self, pegging_pile: PeggingPile, opp_score: int=0) -> Card:
+    def select_peg_card(self, pegging_pile : PeggingPile, opp_score : int=0) -> Card:
         super().select_peg_card(pegging_pile)
         ### If no pegging pile was passed, raise an error
         if pegging_pile == None:
@@ -178,4 +190,30 @@ class NaivePlayer(Player):
         return selected_card
 
 
+
+class NetworkPlayer(Player):
+    def __init__(self, name='Network Player'):
+        super().__init__(name)
+        self._discard_network = self._create_discard_network()
+        self._pegging_network = self._create_pegging_network()
+
+    def _create_discard_network(self) -> tf.keras.Model:
+        """
+        Creates the discard network model, also includes preprocessing layers for easier processing.
+        """
+        pass
+
+    def _create_pegging_network(self) -> tf.keras.Model:
+        pass
+
+    def _convert_hand_to_input(self, dealer : int, opp_score : int) -> tf.Tensor:
+        pass
+
+    def _convert_pegging_to_input(self, ) -> tf.Tensor:
+        pass
+
+    def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
+        self._discard_network.predict()
+
+        return None
 

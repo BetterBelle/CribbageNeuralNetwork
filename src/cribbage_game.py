@@ -5,7 +5,7 @@ import random
 
 
 class CribbageGame():
-    def __init__(self, player_one=RandomPlayer('AI 1'), player_two=RandomPlayer('AI 2')):
+    def __init__(self, player_one=RandomPlayer('AI 1'), player_two=RandomPlayer('AI 2'), winning_score : int=121):
         self._deck = Deck()
         self._player_one = player_one
         self._player_two = player_two
@@ -13,6 +13,7 @@ class CribbageGame():
         self._pegging_pile = PeggingPile()
         self._dealer = random.randint(0, 1)
         self._turn = (self._dealer + 1) % 2
+        self._winning_score = winning_score
 
     def __str__(self) -> str:
         s = '[Game'
@@ -77,6 +78,12 @@ class CribbageGame():
         return self.player_two
 
     @property
+    def non_dealer(self) -> Player:
+        if self._dealer == 0:
+            return self.player_two
+        return self.player_one
+
+    @property
     def turn(self) -> Player:
         """
         Returns the player who's turn it currently is
@@ -84,6 +91,12 @@ class CribbageGame():
         if self._turn == 0:
             return self.player_one
         return self.player_two
+
+    def _score_hand(self, player : Player):
+        """
+        Scores points for the given player
+        """
+        player.score_hand()
 
     def reset_game(self):
         """
@@ -116,3 +129,37 @@ class CribbageGame():
         Handles discards for the two players, puts their discards into the crib
         """
         self.crib.add_cards(self.player_one.select_discards() + self.player_two.select_discards())
+
+    def score_dealer(self, include_top_card=True):
+        """
+        Scores the dealer hands, including the top card. Can exclude the top card by setting include_top_card to false.
+        Because this is the dealer, this will also score points for the crib.
+        """
+        ### If top card included, add it to the player's hand
+        if include_top_card:
+            self.dealer.get_cards([self.deck[-1]])
+
+        ### Score the hand, then remove the top card from the player's hand.
+        self._score_hand(self.dealer)
+        self.dealer.hand.discard([self.deck[-1]])
+
+    def score_non_dealer(self, include_top_card=True):
+        """
+        Scores the non dealer hand, including the top card. Can exclude the top card by setting include_top_card to false.
+        The non dealer does not get the crib score, therefore it is excluded.
+        """
+        ### If top card included, add it to the player's hand
+        if include_top_card:
+            self.non_dealer.get_cards([self.deck[-1]])
+
+        ### Score the hand, then remove the top card from the player's hand.
+        self._score_hand(self.non_dealer)
+        self.non_dealer.hand.discard([self.deck[-1]])
+
+    def get_winner(self) -> Player:
+        if self.player_one.score >= self._winning_score:
+            return self.player_one
+        if self.player_two.score >= self._winning_score:
+            return self.player_two
+        
+        return None
