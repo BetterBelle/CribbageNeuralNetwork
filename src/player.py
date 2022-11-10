@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from src.scoring import Hand, PeggingPile
 from src.card import Card
-# import tensorflow as tf
+import tensorflow as tf
 import random
 import itertools
 
@@ -191,29 +191,29 @@ class NaivePlayer(Player):
 
 
 
-# class NetworkPlayer(Player):
-#     def __init__(self, name='Network Player'):
-#         super().__init__(name)
-#         self._discard_network = self._create_discard_network()
-#         self._pegging_network = self._create_pegging_network()
+class NetworkPlayer(Player):
+    def __init__(self, name='Network Player'):
+        super().__init__(name)
+        self._discard_network = self._create_discard_network()
+        self._pegging_network = self._create_pegging_network()
 
-#     def _create_discard_network(self) -> tf.keras.Model:
-#         """
-#         Creates the discard network model, also includes preprocessing layers for easier processing.
-#         """
-#         pass
+    def _create_discard_network(self) -> tf.keras.Model:
+        """
+        Creates the discard network model, also includes preprocessing layers for easier processing.
+        """
+        pass
 
-#     def _create_pegging_network(self) -> tf.keras.Model:
-#         pass
+    def _create_pegging_network(self) -> tf.keras.Model:
+        pass
 
-#     def _convert_hand_to_input(self, dealer : int, opp_score : int) -> tf.Tensor:
-#         pass
+    def _convert_hand_to_input(self, dealer : int, opp_score : int) -> tf.Tensor:
+        pass
 
-#     def _convert_pegging_to_input(self, ) -> tf.Tensor:
-#         pass
+    def _convert_pegging_to_input(self, ) -> tf.Tensor:
+        pass
 
-#     def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
-#         self._discard_network.predict()
+    def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
+        self._discard_network.predict()
 
-#         return None
+        return None
 
