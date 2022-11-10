@@ -1,6 +1,6 @@
-from scoring import Hand, PeggingPile
-from player import RandomPlayer, Player, HumanPlayer
-from card import Deck
+from src.scoring import Hand, PeggingPile
+from src.player import RandomPlayer, Player
+from src.card import Deck
 import random
 
 
@@ -17,10 +17,10 @@ class CribbageGame():
 
     def __str__(self) -> str:
         s = '[Game'
-        s += '\n\tPlayer 1: ' + str(self.player_one) + str(self.player_one.hand)
+        s += '\n\tPlayer 1: ' + str(self.player_one) + str(self.player_one.hand) + ' score : ' + str(self.player_one.score)
         if self.dealer == self.player_one:
             s += ' <- DEALER'
-        s += '\n\tPlayer 2: ' + str(self.player_two) + str(self.player_two.hand)
+        s += '\n\tPlayer 2: ' + str(self.player_two) + str(self.player_two.hand) + ' score : ' + str(self.player_two.score)
         if self.dealer == self.player_two:
             s += ' <- DEALER'
         
@@ -94,7 +94,7 @@ class CribbageGame():
 
     def _score_hand(self, player : Player):
         """
-        Scores points for the given player
+        Scores points for the given player's hand
         """
         player.score_hand()
 
@@ -106,7 +106,7 @@ class CribbageGame():
         self.deck.return_cards_to_deck(self.player_two.clear_hand())
         self.deck.return_cards_to_deck(self.crib.cards)
         self.deck.return_cards_to_deck(self.pegging_pile.end_pegging())
-        self.crib.discard(self.crib.cards)
+        self.crib.discard(self.crib.cards.copy())
         self._turn = self._dealer
         self._dealer = (self._dealer + 1) % 2
         
@@ -137,11 +137,15 @@ class CribbageGame():
         """
         ### If top card included, add it to the player's hand
         if include_top_card:
-            self.dealer.get_cards([self.deck[-1]])
+            self.dealer.get_cards([self.deck.cards[-1]])
+            # self.crib.add_cards([self.deck.cards[-1]])
 
         ### Score the hand, then remove the top card from the player's hand.
         self._score_hand(self.dealer)
-        self.dealer.hand.discard([self.deck[-1]])
+        # self.dealer.score_points(self.crib.score)
+        if self.deck.cards[-1] in self.dealer.hand.cards:
+            self.dealer.hand.discard([self.deck.cards[-1]])
+            # self.crib.discard([self.deck.cards[-1]])
 
     def score_non_dealer(self, include_top_card=True):
         """
@@ -150,11 +154,12 @@ class CribbageGame():
         """
         ### If top card included, add it to the player's hand
         if include_top_card:
-            self.non_dealer.get_cards([self.deck[-1]])
+            self.non_dealer.get_cards([self.deck.cards[-1]])
 
         ### Score the hand, then remove the top card from the player's hand.
         self._score_hand(self.non_dealer)
-        self.non_dealer.hand.discard([self.deck[-1]])
+        if self.deck.cards[-1] in self.non_dealer.hand.cards:
+            self.non_dealer.hand.discard([self.deck.cards[-1]])
 
     def get_winner(self) -> Player:
         if self.player_one.score >= self._winning_score:

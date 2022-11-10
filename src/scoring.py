@@ -1,4 +1,4 @@
-from card import Card, Face
+from src.card import Card, Face
 import itertools
 
 
@@ -41,30 +41,19 @@ class Hand():
         """
         Scores any runs in the hand
         """
-        self._cards.sort()
         score = 0
-        ### Runs of five
-        if len(self.cards) == 5:
-            if self.cards[-1].rank - len(self.cards) + 1 == self.cards[0].rank:
-                score += 5
-
-        ### If you scored a run of 5, you won't have runs of 3 or 4
-        if score == 0:
-            ### Runs of four
-            for combination in list(itertools.combinations(self.cards, 4)):
-                combination = list(combination)
-                combination.sort()
-                if combination[-1].rank - len(combination) + 1 == combination[0].rank:
-                    score += 4
-
-        ### If you scored runs of 4 or 5, you won't have any runs of 3
-        if score == 0:
-            ### Runs of three
-            for combination in list(itertools.combinations(self.cards, 3)):
-                combination = list(combination)
-                combination.sort()
-                if (combination[-1].rank - len(combination) + 1 == combination[0].rank):
-                    score += 3
+        card_faces = [card.rank for card in self.cards]
+        for i in range(5, 2, -1):
+            if len(card_faces) >= i and score == 0:
+                for combination in list(itertools.combinations(card_faces, i)):
+                    run = True
+                    combination = list(combination)
+                    combination.sort()
+                    for card in range(len(combination)):
+                        if combination[0] != combination[card] - card:
+                            run = False
+                    if run:
+                        score += i
 
         return score
 
@@ -194,10 +183,10 @@ class PeggingPile():
         """
         ### Not sure what the maximum amount of cards can be in play where a long straight is possible, but will assume it's 10
         score = 0
-        for i in range(10, 1, -1):
+        for i in range(10, 2, -1):
             ### If you've already scored, that means you've gotten the maximum amount of points for your run, so just keep iterating
             if len(self.cards_in_play) >= i and score == 0:
-                check_cards = sorted(self.cards_in_play)
+                check_cards = sorted([card.rank for card in self.cards_in_play])[-i:]
                 if (check_cards[-1].rank - len(check_cards) + 1 == check_cards[0].rank):
                     score += i
 
@@ -266,6 +255,6 @@ class PeggingPile():
         Sends all cards to the dead pile, wipes the dead pile and returns the cards that were dead.
         """
         self.end_current_play()
-        dead_cards = self.dead_cards
+        dead_cards = self.dead_cards.copy()
         self.dead_cards.clear()
         return dead_cards
