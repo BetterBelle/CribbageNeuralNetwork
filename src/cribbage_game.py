@@ -132,25 +132,33 @@ class CribbageGame():
 
     def score_dealer(self, include_top_card=True):
         """
-        Scores the dealer hands, including the top card. Can exclude the top card by setting include_top_card to false.
-        Because this is the dealer, this will also score points for the crib.
+        Scores the dealer hand, including the top card. Can exclude the top card by setting include_top_card to false.
         """
         ### If top card included, add it to the player's hand
         if include_top_card:
             self.dealer.get_cards([self.deck.cards[-1]])
-            # self.crib.add_cards([self.deck.cards[-1]])
 
         ### Score the hand, then remove the top card from the player's hand.
         self._score_hand(self.dealer)
-        # self.dealer.score_points(self.crib.score)
+
         if self.deck.cards[-1] in self.dealer.hand.cards:
             self.dealer.hand.discard([self.deck.cards[-1]])
-            # self.crib.discard([self.deck.cards[-1]])
+
+    def score_crib(self, include_top_card=True):
+        """
+        Scores the crib and gives those points to the dealer. Can exclude top card by changing it to False.
+        """
+        if include_top_card:
+            self.crib.add_cards([self.deck.cards[-1]])
+        
+        self.dealer.score_points(self.crib.score)
+
+        if self.deck.cards[-1] in self.crib.cards:
+            self.crib.discard([self.deck.cards[-1]])
 
     def score_non_dealer(self, include_top_card=True):
         """
         Scores the non dealer hand, including the top card. Can exclude the top card by setting include_top_card to false.
-        The non dealer does not get the crib score, therefore it is excluded.
         """
         ### If top card included, add it to the player's hand
         if include_top_card:
