@@ -117,6 +117,16 @@ class CribbageGame():
         self.deck.shuffle()
         self.deck.cut()
 
+    def start_new_game(self):
+        """
+        For when you want to fully clear player scores and start a new game
+        """
+        self.reset_game()
+        self._player_one.clear_score()
+        self._player_two.clear_score()
+        self._dealer = random.randint(0, 1)
+        self._turn = (self._dealer + 1) % 2
+
     def deal_cards(self):
         """
         Deal cards to both players
@@ -128,7 +138,15 @@ class CribbageGame():
         """
         Handles discards for the two players, puts their discards into the crib
         """
-        self.crib.add_cards(self.player_one.select_discards() + self.player_two.select_discards())
+        if self.dealer == self.player_one:
+            dealer = 1
+        else:
+            dealer = 0
+        
+        self.crib.add_cards(
+            self.player_one.select_discards(dealer=dealer, opp_score=self.player_two.score) 
+            + self.player_two.select_discards(dealer=(dealer + 1) % 2, opp_score=self.player_one.score)
+        )
 
     def score_dealer(self, include_top_card=True):
         """

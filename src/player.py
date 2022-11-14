@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from src.scoring import Hand, PeggingPile
-from src.card import Card
+from src.card import Card, Deck
 import tensorflow as tf
 import random
 import itertools
@@ -51,6 +51,9 @@ class Player(metaclass=ABCMeta):
         cards_in_hand = self.hand.cards.copy()
         self.hand.cards.clear()
         return cards_in_hand
+
+    def clear_score(self):
+        self._score = 0
 
     @abstractmethod
     def select_peg_card(self, pegging_pile : PeggingPile, opp_score : int=0) -> Card:
@@ -108,7 +111,7 @@ class HumanPlayer(Player):
     def __init__(self, name='Human Player'):
         super().__init__(name)
 
-    def _present_cards_for_selection(self, num_cards : int=1) -> list[Card]:
+    def _present_cards_for_selection(self, num_cards : int=1, dealer : int=0) -> list[Card]:
         """
         Text representation of the hand for the user to select cards to play/discard
         """
@@ -119,7 +122,10 @@ class HumanPlayer(Player):
             for i, card in enumerate(self.hand.cards):
                 s += '(' + str(i + 1) + ') ' + str(card) + '\n'
 
-            print('Here are your cards:\n' + s)
+            if dealer == 1:
+                print('Here are your cards, you are the dealer:\n' + s)
+            else:
+                print('Here are your cards, you are not the dealer:\n' + s)
             selection = input('Select ' + str(num_cards) + ' cards: ')
             card_indexes = [int(s) for s in selection.split(' ') if s.isdigit()]
             for i in card_indexes:
@@ -132,9 +138,9 @@ class HumanPlayer(Player):
         return selected_cards
 
     def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
-        return self._present_cards_for_selection(2)
+        return self._present_cards_for_selection(2, dealer=dealer)
 
-    def select_peg_card(self, opp_score : int=0, pegging_pile : PeggingPile=None) -> list[Card]:
+    def select_peg_card(self, pegging_pile : PeggingPile, opp_score : int=0, ) -> list[Card]:
         super().select_peg_card(pegging_pile)
         return self._present_cards_for_selection(1)
 
@@ -155,12 +161,14 @@ class NaivePlayer(Player):
         for combination in list(itertools.combinations(self.hand.cards, 2)):
             ### Create a hand with the current combination discarded
             combination = list(combination)
-            scoring_hand = Hand(self.hand.cards)
+            scoring_hand = Hand(self.hand.cards.copy())
             scoring_hand.discard(combination)
             ### When the new hand's score is higher than the recorded highest score, select these discards
             if highest_score <= scoring_hand.score:
                 highest_score = scoring_hand.score
                 selected_discards = combination
+
+        self.hand.discard(selected_discards)
 
         return selected_discards
 
@@ -195,25 +203,50 @@ class NetworkPlayer(Player):
     def __init__(self, name='Network Player'):
         super().__init__(name)
         self._discard_network = self._create_discard_network()
+        self._discard_history = list()
         self._pegging_network = self._create_pegging_network()
 
     def _create_discard_network(self) -> tf.keras.Model:
         """
-        Creates the discard network model, also includes preprocessing layers for easier processing.
+        Creates the discard network model
         """
         pass
 
     def _create_pegging_network(self) -> tf.keras.Model:
+        """
+        Creates the pegging network model
+        """
         pass
 
     def _convert_hand_to_input(self, dealer : int, opp_score : int) -> tf.Tensor:
-        pass
+        ### Create hand as strings, sorted
+        sorted_hand = [str(card) for card in sorted(self.hand.cards)]
+        ### Create deck vocabulary
+        deck_vocabulary = [str(card) for card in Deck().cards]
+        card_encoder = tf.keras.layers.StringLookup(vocabulary=deck_vocabulary, output_mode='one_hot')
+        encoded_hand = card_encoder(sorted_hand)
+        collapsed_hand = tf.concat([card for card in encoded_hand], 0)
+        return collapsed_hand
 
-    def _convert_pegging_to_input(self, ) -> tf.Tensor:
+    def _convert_pegging_to_input(self, dealer : int, opp_score : int, pegging_pile : PeggingPile) -> tf.Tensor:
         pass
 
     def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
-        self._discard_network.predict()
+        """
+        Uses the discard network to determine what cards to discard
+        Also saves the input into the player's discard input history
+        """
+        hand_as_input = self._convert_hand_to_input(dealer, opp_score)
+        print(hand_as_input)
+        # self._discard_network.predict()
+
+        return None
+
+    def select_peg_card(self, pegging_pile: PeggingPile, opp_score: int = 0) -> Card:
+        """
+        Uses the pegging network to select which card to play into the pegging pile
+        """
+        super().select_peg_card(pegging_pile, opp_score)
 
         return None
 
