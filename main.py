@@ -47,20 +47,21 @@ def train_discards_solo():
     player_one = player.NetworkPlayer('Network Player')
     game = CribbageGame(player_one)
 
-    for i in tqdm(range(1_000_000)):
-        ### Make sure the player is not the dealer
-        if game.dealer == player_one:
+    for i in range(20):
+        for j in tqdm(range(50_000)):
+            ### Make sure the player is not the dealer
+            if game.dealer == player_one:
+                game.reset_game()
+            game.initialize_round()
+            game.deal_cards()
+            game.handle_discards()
+            # ### I'm not actually scoring the hand, I just want to know what the score is
+            hand_score = player_one.hand.score
+            # ### Append the hand score to the target scores of the player
+            player_one.append_target_score(hand_score)
             game.reset_game()
-        game.initialize_round()
-        game.deal_cards()
-        game.handle_discards()
-        # ### I'm not actually scoring the hand, I just want to know what the score is
-        hand_score = player_one.hand.score
-        # ### Append the hand score to the target scores of the player
-        player_one.append_target_score(hand_score)
-        game.reset_game()
 
-    player_one.train_discard_model()
+        player_one.train_discard_model(i)
 
 
 

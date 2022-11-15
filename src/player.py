@@ -312,12 +312,18 @@ class NetworkPlayer(Player):
 
         return None
 
-    def train_discard_model(self):
+    def train_discard_model(self, network_id : int=0):
         """
         Requires you to have played discard phases with the model, but trains the model using it's discard input history,
-        target scores and chosen index to construct target vectors
+        target scores and chosen index to construct target vectors.
+        After training is done, clear all the discard histories.
         """
         self._create_discard_target_vectors()
-        self._discard_network.fit(tf.convert_to_tensor(self._discard_input_history), tf.convert_to_tensor(self._discard_output_history), batch_size=200, epochs=1000000)
-        self._discard_network.save_weights('test_network')
+        self._discard_network.fit(tf.convert_to_tensor(self._discard_input_history), tf.convert_to_tensor(self._discard_output_history), batch_size=200, epochs=300)
+        ### Clear all discard histories for next training batch
+        self._discard_chosen_index.clear()
+        self._discard_input_history.clear()
+        self._discard_output_history.clear()
+        self._discard_target_scores.clear()
+        self._discard_network.save_weights('test_network' + str(network_id))
 
