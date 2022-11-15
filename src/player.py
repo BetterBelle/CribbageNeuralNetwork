@@ -203,10 +203,10 @@ class NetworkPlayer(Player):
     def __init__(self, name='Network Player'):
         super().__init__(name)
         self._discard_network = self._create_discard_network()
-        self._discard_input_history = list()
-        self._discard_output_history = list()
-        self._discard_target_scores = list()
-        self._discard_chosen_index = list()
+        self._discard_input = None
+        self._discard_output = None
+        self._discard_output_target = None
+        self._discard_chosen_index = None
         
         self._pegging_network = self._create_pegging_network()
 
@@ -249,7 +249,10 @@ class NetworkPlayer(Player):
         """
         pass
 
-    def _convert_hand_to_input(self, dealer : int, opp_score : int) -> tf.Tensor:
+    def _convert_hand_to_input(self, dealer : int, opp_score : int):
+        """
+        Converts discard input into a tensor and stores it into self._discard_input property
+        """
         ### Create hand as strings, sorted
         sorted_hand = [str(card) for card in sorted(self.hand.cards)]
         ### Create deck vocabulary
@@ -257,8 +260,7 @@ class NetworkPlayer(Player):
         card_encoder = tf.keras.layers.StringLookup(vocabulary=deck_vocabulary, output_mode='one_hot')
         encoded_hand = card_encoder(sorted_hand)
         collapsed_hand = tf.concat([card for card in encoded_hand], 0)
-        full_input = tf.concat([collapsed_hand, [dealer, self.score / 121.0, opp_score / 121.0]], 0)
-        return full_input
+        self._discard_input = tf.concat([collapsed_hand, [dealer, self.score / 121.0, opp_score / 121.0]], 0)
 
     def _convert_pegging_to_input(self, dealer : int, opp_score : int, pegging_pile : PeggingPile) -> tf.Tensor:
         pass
@@ -277,28 +279,48 @@ class NetworkPlayer(Player):
             self._discard_output_history[i][self._discard_chosen_index[i]] = target_values[i]
 
     def append_target_score(self, score : int):
-        self._discard_target_scores.append(score)
+        """
+        Changes the self contained discard output target so the chosen index target value is the score / 121
+        """
+        self._discard_output_target = self._discard_output
+        self._discard_output_target[self._discard_chosen_index] = score / 121.0
+
+    def write_io_to_files(self):
+        """
+        Writes the self contained input and target output values to two files, inputs.csv and outputs.csv
+        """
+        input_writer = open(r'inputs.csv', 'a')
+        input_writer.write('\n')
+        for item in self._discard_input:
+            input_writer.write(str(float(item)) + ',')
+        
+        input_writer.close()
+
+        output_writer = open(r'outputs.csv', 'a')
+        output_writer.write('\n')
+        for item in self._discard_output_target:
+            output_writer.write(str(float(item)) + ',')
+
+        output_writer.close()
 
     def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
         """
         Uses the discard network to determine what cards to discard
         Also saves the input into the player's discard input history
         """
-        ### Convert hand, dealer and opponent score to tensor
-        hand_as_input = self._convert_hand_to_input(dealer, opp_score)
+        ### Convert hand, dealer and opponent score to tensor and store it
+        self._convert_hand_to_input(dealer, opp_score)
+        hand_as_input = self._discard_input
 
-        ### Append tensor to input history then convert it to list of tensors for prediction
-        self._discard_input_history.append(hand_as_input)
+        ### Append convert to list of tensors for predictions
         hand_as_input = tf.convert_to_tensor([hand_as_input])
 
         ### Get prediction and add it to output history
-        prediction = list(self._discard_network.predict(hand_as_input, verbose=0)[0])
-        self._discard_output_history.append(prediction)
+        self._discard_output = list(self._discard_network.predict(hand_as_input, verbose=0)[0])
         ### Convert prediction to index and add it to discard chosen index history
-        prediction = int(tf.argmax(prediction))
-        self._discard_chosen_index.append(prediction)
+        self._discard_chosen_index = int(tf.argmax(self._discard_output))
         ### Choose cards using discard mapping, then remove them from hand and return them
-        cards_to_discard_index = self._discard_mapping[prediction]
+        cards_to_discard_index = self._discard_mapping[self._discard_chosen_index]
         selected_discards = [sorted(self.hand.cards)[cards_to_discard_index[0]], sorted(self.hand.cards)[cards_to_discard_index[1]]]
         self.hand.discard(selected_discards)
 
@@ -312,7 +334,7 @@ class NetworkPlayer(Player):
 
         return None
 
-    def train_discard_model(self, network_id : int=0):
+    def train_discard_model(self):
         """
         Requires you to have played discard phases with the model, but trains the model using it's discard input history,
         target scores and chosen index to construct target vectors.
@@ -321,9 +343,5 @@ class NetworkPlayer(Player):
         self._create_discard_target_vectors()
         self._discard_network.fit(tf.convert_to_tensor(self._discard_input_history), tf.convert_to_tensor(self._discard_output_history), batch_size=200, epochs=300)
         ### Clear all discard histories for next training batch
-        self._discard_chosen_index.clear()
-        self._discard_input_history.clear()
-        self._discard_output_history.clear()
-        self._discard_target_scores.clear()
-        self._discard_network.save_weights('test_network' + str(network_id))
+        self._discard_network.save_weights('test_network')
 
