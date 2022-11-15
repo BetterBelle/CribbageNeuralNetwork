@@ -2,7 +2,7 @@ from src.cribbage_game import CribbageGame
 import src.player as player
 from tqdm import tqdm
 
-if __name__ == '__main__':
+def random_vs_naive():
     player_one = player.NaivePlayer('Test 1')
     player_two = player.RandomPlayer('Test 2')
     player_one_wins = 0
@@ -40,3 +40,30 @@ if __name__ == '__main__':
     print('The final score was: ')
     print(str(player_one) + ': ' + str(player_one_wins))
     print(str(player_two) + ': ' + str(player_two_wins))
+
+
+
+def train_discards_solo():
+    player_one = player.NetworkPlayer('Network Player')
+    game = CribbageGame(player_one)
+
+    for i in tqdm(range(1_000_000)):
+        ### Make sure the player is not the dealer
+        if game.dealer == player_one:
+            game.reset_game()
+        game.initialize_round()
+        game.deal_cards()
+        game.handle_discards()
+        # ### I'm not actually scoring the hand, I just want to know what the score is
+        hand_score = player_one.hand.score
+        # ### Append the hand score to the target scores of the player
+        player_one.append_target_score(hand_score)
+        game.reset_game()
+
+    player_one.train_discard_model()
+
+
+
+if __name__ == '__main__':
+    # random_vs_naive()
+    train_discards_solo()
