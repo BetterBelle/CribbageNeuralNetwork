@@ -48,6 +48,7 @@ def random_vs_naive():
 
 
 def train_discards_solo():
+    ### Run 20 batches of hands, this is done to avoid Python leaking memory
     for i in range(20):
         process = multiprocessing.Process(target=run_training_batch, args=[i])
         process.start()
@@ -57,28 +58,40 @@ def train_discards_solo():
 
 
 def run_training_batch(i):
+    ### Create network player and game
     player_one = player.NetworkPlayer('Network Player')
     game = CribbageGame(player_one)
+
+    ### If there exists a network file, load it because it was the last saved weights
     if os.path.exists(f'test_network{i-1}.h5'):
         player_one.load_discard_model(f'test_network{i-1}.h5')
 
+    ### Run batch of 50k hands
     for _ in tqdm(range(50_000)):
         ### Make sure the player is not the dealer
         if game.dealer == player_one:
             game.reset_game()
+
+        ### Initialize, deal and handle discards
         game.initialize_round()
         game.deal_cards()
         game.handle_discards()
-        # ### I'm not actually scoring the hand, I just want to know what the score is
+
+        ### I'm not actually scoring the hand, I just want to know what the score is
         hand_score = player_one.hand.score
-        # ### Append the hand score to the target scores of the player
+
+        ### Append the hand score to the target scores of the player
         player_one.append_target_score(hand_score)
         game.reset_game()
 
+    ### If writing input and output to files
     # player_one.write_io_to_files()
+
     player_one.train_discard_model(i)
-    f = open('inputs.csv', 'w').close()
-    f = open('outputs.csv', 'w').close()
+
+    ### Only needed if writing to files
+    # f = open('inputs.csv', 'w').close()
+    # f = open('outputs.csv', 'w').close()
     return
 
 

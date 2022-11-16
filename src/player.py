@@ -253,7 +253,7 @@ class NetworkPlayer(Player):
 
     def _convert_hand_to_input(self, dealer : int, opp_score : int):
         """
-        Converts discard input into a tensor and stores it into self._discard_input property
+        Converts discard input into a tensor and stores it into self._discard_inputs property's last item
         """
         ### Create hand as strings, sorted
         sorted_hand = [str(card) for card in sorted(self.hand.cards)]
@@ -268,11 +268,14 @@ class NetworkPlayer(Player):
         pass
 
     def load_discard_model(self, filename : str):
+        """
+        Loads the discard model's weights using the given filename
+        """
         self._discard_network.load_weights(filename)
 
     def append_target_score(self, score : int):
         """
-        Changes the self contained discard output target so the chosen index target value is the score / 121
+        Appends the most recent output to the end of the output targets, but changing the chosen index's value to the given score as the target
         """
         self._discard_output_targets.append(self._discard_output)
         self._discard_output_targets[-1][self._discard_chosen_index] = score / 121.0
@@ -281,15 +284,22 @@ class NetworkPlayer(Player):
         """
         Writes the self contained input and target output values to two files, inputs.csv and outputs.csv
         """
+        ### Create input writer
         input_writer = open(r'inputs.csv', 'a')
+        ### For each input
         for line in self._discard_inputs:
+            ### For each value in the input, except the last one
             for item in line[:-1]:
+                ### Write the value and a comma
                 input_writer.write(str(float(item)) + ',')
+            ### Write the last value with a new line
             input_writer.write(str(float(line[-1])) + '\n')
 
         input_writer.close()
+        ### Clear inputs
         self._discard_inputs.clear()
 
+        ### Same as above but for outputs
         output_writer = open(r'outputs.csv', 'a')
         for line in self._discard_output_targets:
             for item in line[:-1]:
@@ -297,6 +307,7 @@ class NetworkPlayer(Player):
             output_writer.write(str(float(line[-1])) + '\n')
 
         output_writer.close()
+        ### Clear outputs
         self._discard_output_targets.clear()
 
     def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
@@ -304,14 +315,14 @@ class NetworkPlayer(Player):
         Uses the discard network to determine what cards to discard
         Also saves the input into the player's discard input history
         """
-        ### Convert hand, dealer and opponent score to tensor and store it
+        ### Convert hand, dealer and opponent score as list into self._discard_inputs, then convert it to tensor for prediction
         self._convert_hand_to_input(dealer, opp_score)
         hand_as_input = tf.convert_to_tensor([self._discard_inputs[-1]])
 
-        ### Get prediction and add it to output history
+        ### Get prediction into discard output property
         self._discard_output = list(self._discard_network.predict(hand_as_input, verbose=0)[0])
 
-        ### Convert prediction to index and add it to discard chosen index history
+        ### Convert prediction to index and set discard chosen index to it
         self._discard_chosen_index = int(tf.argmax(self._discard_output))
 
         ### Choose cards using discard mapping, then remove them from hand and return them

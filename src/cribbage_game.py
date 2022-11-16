@@ -6,6 +6,9 @@ import random
 
 class CribbageGame():
     def __init__(self, player_one=RandomPlayer('AI 1'), player_two=RandomPlayer('AI 2'), winning_score : int=121):
+        """
+        Initializes the deck, players, crib, pegging pile, dealer and turn counters and target winning score of a cribbage game
+        """
         self._deck = Deck()
         self._player_one = player_one
         self._player_two = player_two
@@ -16,6 +19,9 @@ class CribbageGame():
         self._winning_score = winning_score
 
     def __str__(self) -> str:
+        """
+        Do note that printing the game as a string gives away player hands, crib and pegging pile
+        """
         s = '[Game'
         s += '\n\tPlayer 1: ' + str(self.player_one) + str(self.player_one.hand) + ' score : ' + str(self.player_one.score)
         if self.dealer == self.player_one:
@@ -79,6 +85,9 @@ class CribbageGame():
 
     @property
     def non_dealer(self) -> Player:
+        """
+        Returns whoever is not the dealer
+        """
         if self._dealer == 0:
             return self.player_two
         return self.player_one
@@ -188,6 +197,10 @@ class CribbageGame():
             self.non_dealer.hand.discard([self.deck.cards[-1]])
 
     def get_winner(self) -> Player:
+        """
+        If a player has more than the winning score, return them, starts with player one.
+        Note this doesn't take into consideration whether the players both have a winning score and hence this must be used proactively
+        """
         if self.player_one.score >= self._winning_score:
             return self.player_one
         if self.player_two.score >= self._winning_score:
