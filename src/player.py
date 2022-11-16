@@ -348,10 +348,10 @@ class NetworkPlayer(Player):
         ### This is to be used if need to read from files instead of just reading from internal variables
         # x = pd.read_csv('inputs.csv', header=None)
         # y = pd.read_csv('outputs.csv', header=None)
-        x = tf.convert_to_tensor(self._discard_inputs)
-        y = tf.convert_to_tensor(self._discard_output_targets)
+        x = tf.convert_to_tensor([self._discard_inputs[-1]])
+        y = tf.convert_to_tensor([self._discard_output_targets[-1]])
         
-        self._discard_network.fit(x, y, batch_size=8192, epochs=1)
+        self._discard_network.fit(x, y, epochs=1, verbose=0)
         ### Save model for future reference
         self._discard_network.save(f'test_network{i}.h5', save_format='h5')
 

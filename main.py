@@ -49,7 +49,7 @@ def random_vs_naive():
 
 def train_discards_solo():
     ### Run 20 batches of hands, this is done to avoid Python leaking memory
-    for i in range(100):
+    for i in range(20):
         process = multiprocessing.Process(target=run_training_batch, args=[i])
         process.start()
         process.join()
@@ -69,7 +69,7 @@ def run_training_batch(i):
     #     player_one.load_discard_model(f'test_network_best.h5')
 
     ### Run batch of 50k hands
-    for _ in tqdm(range(10_000)):
+    for _ in tqdm(range(50_000)):
         ### Make sure the player is not the dealer
         if game.dealer == player_one:
             game.reset_game()
@@ -84,12 +84,11 @@ def run_training_batch(i):
 
         ### Append the hand score to the target scores of the player
         player_one.append_target_score(hand_score)
+        player_one.train_discard_model(i)
         game.reset_game()
 
     ### If writing input and output to files
     # player_one.write_io_to_files()
-
-    player_one.train_discard_model(i)
 
     ### Only needed if writing to files
     # f = open('inputs.csv', 'w').close()
@@ -101,7 +100,7 @@ def run_training_batch(i):
 def network_vs_random():
     player_one = player.RandomPlayer('Random Player')
     player_two = player.NetworkPlayer('Network Player')
-    player_two.load_discard_model(f'test_network0.h5')
+    player_two.load_discard_model(f'test_network2.h5')
     player_one_wins = 0
     player_two_wins = 0
     game = CribbageGame(player_one, player_two)
@@ -145,5 +144,5 @@ def network_vs_random():
 
 if __name__ == '__main__':
     # random_vs_naive()
-    train_discards_solo()
-    # network_vs_random()
+    # train_discards_solo()
+    network_vs_random()
