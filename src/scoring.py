@@ -232,8 +232,8 @@ class PeggingPile():
         """
         Sends all current cards in play to the pile of cards not in play
         """
-        self._dead_cards.extend(self.cards_in_play)
-        self._cards_in_play = []
+        self._dead_cards.extend(self.cards_in_play.copy())
+        self._cards_in_play.clear()
 
     def add_to_play(self, card : Card) -> int:
         """

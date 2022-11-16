@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from src.scoring import Hand, PeggingPile
 from src.card import Card, Deck
+import pandas as pd
+import numpy as np
 import tensorflow as tf
 import random
 import itertools
@@ -203,9 +205,9 @@ class NetworkPlayer(Player):
     def __init__(self, name='Network Player'):
         super().__init__(name)
         self._discard_network = self._create_discard_network()
-        self._discard_input = None
+        self._discard_inputs = list()
         self._discard_output = None
-        self._discard_output_target = None
+        self._discard_output_targets = list()
         self._discard_chosen_index = None
         
         self._pegging_network = self._create_pegging_network()
@@ -240,7 +242,7 @@ class NetworkPlayer(Player):
         outputs = tf.keras.layers.Dense(15, activation='linear')(dense4)
 
         model = tf.keras.Model(inputs=inputs, outputs=outputs, name='crib_discard_model')
-        model.compile(optimizer=tf.keras.optimizers.Adam(), loss=tf.keras.losses.MeanAbsoluteError(), metrics=['accuracy'])
+        model.compile(optimizer=tf.keras.optimizers.Adam(), loss=tf.keras.losses.MeanAbsoluteError(), metrics=['mse'])
         return model
 
     def _create_pegging_network(self) -> tf.keras.Model:
@@ -260,48 +262,42 @@ class NetworkPlayer(Player):
         card_encoder = tf.keras.layers.StringLookup(vocabulary=deck_vocabulary, output_mode='one_hot')
         encoded_hand = card_encoder(sorted_hand)
         collapsed_hand = tf.concat([card for card in encoded_hand], 0)
-        self._discard_input = tf.concat([collapsed_hand, [dealer, self.score / 121.0, opp_score / 121.0]], 0)
+        self._discard_inputs.append(tf.concat([collapsed_hand, [dealer, self.score / 121.0, opp_score / 121.0]], 0))
 
     def _convert_pegging_to_input(self, dealer : int, opp_score : int, pegging_pile : PeggingPile) -> tf.Tensor:
         pass
 
-    def _create_discard_target_vectors(self):
-        """
-        Converts discard output history into target vectors for training
-        """
-        ### Convert all target scores into fractional values using target score of 121
-        target_values = list()
-        for val in self._discard_target_scores:
-            target_values.append(val / 121)
-
-        ### Modify discard output history using new target values and chosen indexes into the output history
-        for i in range(len(self._discard_output_history)):
-            self._discard_output_history[i][self._discard_chosen_index[i]] = target_values[i]
+    def load_discard_model(self, filename : str):
+        self._discard_network.load_weights(filename)
 
     def append_target_score(self, score : int):
         """
         Changes the self contained discard output target so the chosen index target value is the score / 121
         """
-        self._discard_output_target = self._discard_output
-        self._discard_output_target[self._discard_chosen_index] = score / 121.0
+        self._discard_output_targets.append(self._discard_output)
+        self._discard_output_targets[-1][self._discard_chosen_index] = score / 121.0
 
     def write_io_to_files(self):
         """
         Writes the self contained input and target output values to two files, inputs.csv and outputs.csv
         """
         input_writer = open(r'inputs.csv', 'a')
-        input_writer.write('\n')
-        for item in self._discard_input:
-            input_writer.write(str(float(item)) + ',')
-        
+        for line in self._discard_inputs:
+            for item in line[:-1]:
+                input_writer.write(str(float(item)) + ',')
+            input_writer.write(str(float(line[-1])) + '\n')
+
         input_writer.close()
+        self._discard_inputs.clear()
 
         output_writer = open(r'outputs.csv', 'a')
-        output_writer.write('\n')
-        for item in self._discard_output_target:
-            output_writer.write(str(float(item)) + ',')
+        for line in self._discard_output_targets:
+            for item in line[:-1]:
+                output_writer.write(str(float(item)) + ',')
+            output_writer.write(str(float(line[-1])) + '\n')
 
         output_writer.close()
+        self._discard_output_targets.clear()
 
     def select_discards(self, dealer : int=0, opp_score : int=0) -> list[Card]:
         """
@@ -310,15 +306,14 @@ class NetworkPlayer(Player):
         """
         ### Convert hand, dealer and opponent score to tensor and store it
         self._convert_hand_to_input(dealer, opp_score)
-        hand_as_input = self._discard_input
-
-        ### Append convert to list of tensors for predictions
-        hand_as_input = tf.convert_to_tensor([hand_as_input])
+        hand_as_input = tf.convert_to_tensor([self._discard_inputs[-1]])
 
         ### Get prediction and add it to output history
         self._discard_output = list(self._discard_network.predict(hand_as_input, verbose=0)[0])
+
         ### Convert prediction to index and add it to discard chosen index history
         self._discard_chosen_index = int(tf.argmax(self._discard_output))
+
         ### Choose cards using discard mapping, then remove them from hand and return them
         cards_to_discard_index = self._discard_mapping[self._discard_chosen_index]
         selected_discards = [sorted(self.hand.cards)[cards_to_discard_index[0]], sorted(self.hand.cards)[cards_to_discard_index[1]]]
@@ -334,14 +329,19 @@ class NetworkPlayer(Player):
 
         return None
 
-    def train_discard_model(self):
+    def train_discard_model(self, i):
         """
         Requires you to have played discard phases with the model, but trains the model using it's discard input history,
         target scores and chosen index to construct target vectors.
         After training is done, clear all the discard histories.
         """
-        self._create_discard_target_vectors()
-        self._discard_network.fit(tf.convert_to_tensor(self._discard_input_history), tf.convert_to_tensor(self._discard_output_history), batch_size=200, epochs=300)
-        ### Clear all discard histories for next training batch
-        self._discard_network.save_weights('test_network')
+        ### This is to be used if need to read from files instead of just reading from internal variables
+        # x = pd.read_csv('inputs.csv', header=None)
+        # y = pd.read_csv('outputs.csv', header=None)
+        x = tf.convert_to_tensor(self._discard_inputs)
+        y = tf.convert_to_tensor(self._discard_output_targets)
+        
+        self._discard_network.fit(x, y, batch_size=200, epochs=300, validation_split=0.2)
+        ### Save model for future reference
+        self._discard_network.save(f'test_network{i}.h5', save_format='h5')
 
