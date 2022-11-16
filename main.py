@@ -65,6 +65,8 @@ def run_training_batch(i):
     ### If there exists a network file, load it because it was the last saved weights
     if os.path.exists(f'test_network{i-1}.h5'):
         player_one.load_discard_model(f'test_network{i-1}.h5')
+    else:
+        player_one.load_discard_model(f'test_network_best.h5')
 
     ### Run batch of 50k hands
     for _ in tqdm(range(50_000)):
@@ -104,16 +106,18 @@ def network_vs_random():
     player_two_wins = 0
     game = CribbageGame(player_one, player_two)
 
-    for i in tqdm(range(1_000)):
+    for i in tqdm(range(5)):
         while (game.get_winner() == None):
             # Initialize round
             game.initialize_round()
 
             # Deal cards
             game.deal_cards()
+            print (game)
 
             # Get players to select discards
             game.handle_discards()
+            
 
             # Score non-dealer hand
             game.score_non_dealer()
@@ -122,6 +126,7 @@ def network_vs_random():
             if game.get_winner() == None:
                 game.score_dealer()
                 game.score_crib()
+            print (game)
 
             # Reset game (collect all cards)
             game.reset_game()
