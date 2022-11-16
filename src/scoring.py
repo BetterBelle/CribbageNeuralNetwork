@@ -9,7 +9,7 @@ class Hand():
 
     def __str__(self) -> str:
         s = '[Hand: '
-        for card in self.cards:
+        for card in sorted(self.cards):
             s += str(card) + ' '
         return s + ']'
 

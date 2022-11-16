@@ -242,7 +242,7 @@ class NetworkPlayer(Player):
         outputs = tf.keras.layers.Dense(15, activation='linear')(dense4)
 
         model = tf.keras.Model(inputs=inputs, outputs=outputs, name='crib_discard_model')
-        model.compile(optimizer=tf.keras.optimizers.Adam(), loss=tf.keras.losses.MeanAbsoluteError(), metrics=['mse'])
+        model.compile(optimizer=tf.keras.optimizers.Adam(), loss=tf.keras.losses.MeanAbsoluteError(), metrics=[tf.keras.losses.MeanSquaredError(), tf.keras.losses.Huber()])
         return model
 
     def _create_pegging_network(self) -> tf.keras.Model:
@@ -344,7 +344,6 @@ class NetworkPlayer(Player):
         """
         Requires you to have played discard phases with the model, but trains the model using it's discard input history,
         target scores and chosen index to construct target vectors.
-        After training is done, clear all the discard histories.
         """
         ### This is to be used if need to read from files instead of just reading from internal variables
         # x = pd.read_csv('inputs.csv', header=None)
@@ -352,7 +351,7 @@ class NetworkPlayer(Player):
         x = tf.convert_to_tensor(self._discard_inputs)
         y = tf.convert_to_tensor(self._discard_output_targets)
         
-        self._discard_network.fit(x, y, batch_size=200, epochs=300, validation_split=0.2)
+        self._discard_network.fit(x, y, batch_size=8192, epochs=1)
         ### Save model for future reference
         self._discard_network.save(f'test_network{i}.h5', save_format='h5')
 

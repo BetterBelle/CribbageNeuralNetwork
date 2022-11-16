@@ -49,7 +49,7 @@ def random_vs_naive():
 
 def train_discards_solo():
     ### Run 20 batches of hands, this is done to avoid Python leaking memory
-    for i in range(20):
+    for i in range(100):
         process = multiprocessing.Process(target=run_training_batch, args=[i])
         process.start()
         process.join()
@@ -65,11 +65,11 @@ def run_training_batch(i):
     ### If there exists a network file, load it because it was the last saved weights
     if os.path.exists(f'test_network{i-1}.h5'):
         player_one.load_discard_model(f'test_network{i-1}.h5')
-    else:
-        player_one.load_discard_model(f'test_network_best.h5')
+    # else:
+    #     player_one.load_discard_model(f'test_network_best.h5')
 
     ### Run batch of 50k hands
-    for _ in tqdm(range(50_000)):
+    for _ in tqdm(range(10_000)):
         ### Make sure the player is not the dealer
         if game.dealer == player_one:
             game.reset_game()
@@ -101,19 +101,19 @@ def run_training_batch(i):
 def network_vs_random():
     player_one = player.RandomPlayer('Random Player')
     player_two = player.NetworkPlayer('Network Player')
-    player_two.load_discard_model(f'test_network19.h5')
+    player_two.load_discard_model(f'test_network0.h5')
     player_one_wins = 0
     player_two_wins = 0
     game = CribbageGame(player_one, player_two)
 
-    for i in tqdm(range(5)):
+    for i in tqdm(range(1_000)):
         while (game.get_winner() == None):
             # Initialize round
             game.initialize_round()
 
             # Deal cards
             game.deal_cards()
-            print (game)
+            # print (game)
 
             # Get players to select discards
             game.handle_discards()
@@ -126,7 +126,7 @@ def network_vs_random():
             if game.get_winner() == None:
                 game.score_dealer()
                 game.score_crib()
-            print (game)
+            # print (game)
 
             # Reset game (collect all cards)
             game.reset_game()
