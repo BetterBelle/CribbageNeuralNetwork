@@ -209,6 +209,7 @@ class NetworkPlayer(Player):
         self._discard_output = None
         self._discard_output_targets = list()
         self._discard_chosen_index = None
+        self._eps = 0.2
         
         self._pegging_network = self._create_pegging_network()
 
@@ -322,13 +323,20 @@ class NetworkPlayer(Player):
         ### Get prediction into discard output property
         self._discard_output = list(self._discard_network.predict(hand_as_input, verbose=0)[0])
 
-        ### Convert prediction to index and set discard chosen index to it
-        self._discard_chosen_index = int(tf.argmax(self._discard_output))
+        if random.uniform(0, 1) > self._eps:
+            ### Convert prediction to index and set discard chosen index to it
+            self._discard_chosen_index = int(tf.argmax(self._discard_output))
+        else:
+            self._discard_chosen_index = random.randint(0, 14)
 
         ### Choose cards using discard mapping, then remove them from hand and return them
         cards_to_discard_index = self._discard_mapping[self._discard_chosen_index]
         selected_discards = [sorted(self.hand.cards)[cards_to_discard_index[0]], sorted(self.hand.cards)[cards_to_discard_index[1]]]
         self.hand.discard(selected_discards)
+
+        ### Set target
+        self._discard_output_targets.append(self._discard_output)
+        self._discard_output_targets[-1][self._discard_chosen_index] = self.hand.score / 121.0
 
         return selected_discards
 
@@ -348,10 +356,11 @@ class NetworkPlayer(Player):
         ### This is to be used if need to read from files instead of just reading from internal variables
         # x = pd.read_csv('inputs.csv', header=None)
         # y = pd.read_csv('outputs.csv', header=None)
-        x = tf.convert_to_tensor([self._discard_inputs[-1]])
-        y = tf.convert_to_tensor([self._discard_output_targets[-1]])
+        x = tf.convert_to_tensor(self._discard_inputs)
+        y = tf.convert_to_tensor(self._discard_output_targets)
         
         self._discard_network.fit(x, y, epochs=1, verbose=0)
         ### Save model for future reference
-        self._discard_network.save(f'test_network{i}.h5', save_format='h5')
+        if (i % 50 == 0):
+            self._discard_network.save(f'test_network{i}.h5', save_format='h5')
 
