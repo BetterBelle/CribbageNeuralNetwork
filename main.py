@@ -103,7 +103,7 @@ def run_training_batch(i):
     print('Hand Diffs:', str(score_diff))
     print ('Average Score Ratio: ', str(sum(score_ratios) / len(score_ratios)))
     print('Average Hand Difference: ', str(sum(score_diff) / len(score_diff)))
-    return
+    
 
 def run_full_training():
     player_one = player.NetworkPlayer('Network Player 1')

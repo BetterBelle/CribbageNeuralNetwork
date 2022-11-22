@@ -279,7 +279,7 @@ class NetworkPlayer(Player):
         Appends the most recent output to the end of the output targets, but changing the chosen index's value to the given score as the target
         """
         self._discard_output_targets.append(self._discard_output)
-        self._discard_output_targets[-1][self._discard_chosen_index] = score / 121.0
+        self._discard_output_targets[-1][self._discard_chosen_index] = score
 
     def write_io_to_files(self):
         """
@@ -336,7 +336,7 @@ class NetworkPlayer(Player):
 
         ### Set target
         self._discard_output_targets.append(self._discard_output)
-        self._discard_output_targets[-1][self._discard_chosen_index] = self.hand.score / 121.0
+        self._discard_output_targets[-1][self._discard_chosen_index] = self.hand.score
 
         return selected_discards
 
