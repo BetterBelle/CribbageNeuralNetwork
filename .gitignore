@@ -1,2 +1,11 @@
 __pycache__
 *test*
+
+### ignores for latex document
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+*.out
+network*
