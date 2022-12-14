@@ -2,6 +2,7 @@ __pycache__
 *test*
 network*
 inputs.txt
+results.txt
 
 ### ignores for latex document
 *.aux
