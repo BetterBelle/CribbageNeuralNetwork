@@ -1,5 +1,7 @@
 __pycache__
 *test*
+network*
+inputs.txt
 
 ### ignores for latex document
 *.aux
@@ -8,4 +10,5 @@ __pycache__
 *.log
 *.synctex.gz
 *.out
-network*
+*.bbl
+*.blg
