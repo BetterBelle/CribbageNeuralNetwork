@@ -23,7 +23,7 @@ where $\alpha$ is the learning rate and $\gamma$ is a discount rate, so the agen
 
 One issue with this method is that as the state and action spaces enlarge, it requires significantly more memory to store these significantly more massive tables. This is especially an issue in my specific case, where a player is dealt 6 cards from a 52 card deck, meaning there are $52\choose{6}$ different hands, or more specifically, 20,358,520 possible hand states and 15 actions, which will be defined in more detail later. When it comes to applying the Bellman Equation over this massive table, it would take an incredible amount of time, as every single hand would have to be progressively iterated in order to optimize the decision process.
 
-One way that has been attempted to circumvent this is to implement these Q-Tables as a neural network with inputs representing the state space and ouputs representing the different Q-Values of the function in an attempt to create a proper function approximator instead of using a table. This has however historically been known to be unstable using a nonlinear function approximator, which is precisely what a neural network is\cite{temp_diff_analysis}. This shortcoming was then addressed by Google DeepMind in 2015, where they attempted successfully to fix this with two ideas, namely what they call experience replay, as well as a mechanism that adjusts the outputs of the network towards the target value only periodically\cite{deepmind_2015}. In experience replay, the data is randomized and replayed, instead of iteratively applying this network over the environment as is standard with Q-Learning. These two ideas are quintessential to the concept of a Deep Q-Network.
+One way that has been attempted to circumvent this is to implement these Q-Tables as a neural network with inputs representing the state space and ouputs representing the different Q-Values of the function in an attempt to create a proper function approximator instead of using a table. This has however historically been known to be unstable using a nonlinear function approximator, which is precisely what a neural network attempts to do\cite{temp_diff_analysis}. This shortcoming was then addressed by Google DeepMind in 2015, where they attempted successfully to fix this with two ideas, namely what they call experience replay, as well as a mechanism that adjusts the outputs of the network towards the target value only periodically\cite{deepmind_2015}. In experience replay, the data is randomized and replayed, instead of iteratively applying this network over the environment as is standard with Q-Learning. These two ideas are quintessential to the concept of a Deep Q-Network\cite{drl_survey}.
 
 \subsection{Cribbage}
 
@@ -46,7 +46,7 @@ Because this project only deals with the scoring phase, I'll not be describing t
 \begin{enumerate}
     \item Any combination of cards adding up to 15 scores 2 points. For example a Jack and Five count as fifteen, but so do a Four, Five and Six. As a more specific example, a hand of Four, Five(1), Five(2), Six would contain 4 points worth of 15s. These are the combinations Four, Five(1), Six as well as the second trio of Four, Five(2), Six. 
     \item Any pair of cards of the same face scores 2 points. This effect can stack as well, for example a hand Four(1), Four(2), Four(3) will contain 6 points worth of pairs, for each combination of pairs possible. This effect runs the same for a four of a kind as well, scoring 12 points. To note is that two different face cards, such as a Jack and King, despite holding the same value of 10 for counting do not count as a pair. 
-    \item Any three cards or more of consecutive rank scores one point per card in the run, such as Four-Five-Six, which would count 3 points. This effect can happen multiple times for a hand such as Four-Five-Five-Six, which contains two runs of three cards, totalling 6 points in runs, but for a hand such as Five-Six-Seven-Eight, this only counts 4 points for the run of four cards. 
+    \item Any three cards or more of consecutive rank scores one point per card in the run, such as Four-Five-Six, which would count 3 points. This effect can happen multiple times for a hand such as Four-Five-Five-Six, which contains two runs of three cards, totalling 6 points in runs, but for a hand such as Five-Six-Seven-Eight, this only counts 4 points for the run of four cards, and \textbf{not} as two runs of three (Five-Six-Seven and Six-Seven-Eight). 
     \item If all four cards in a player's hand are of the same suit, 4 points are scored. If the start card also matches suit, it instead scores 5 points. Note that you only score this if all the player's hand is the same suit; if the start card matches suit with three of the player's hand, this does not count as a 4 point flush.
     \item The last rule is called "one for his nob". If the hand contains the Jack card that matches the suit of the start card, that player scores an extra point. 
 \end{enumerate}
@@ -69,11 +69,11 @@ With all of these requirements done, I can now begin my approach to codify the n
 
 The input for the network is relatively straightfoward as it contains a one-hot encoding of the six cards in the player's hand consisting of 318 nodes, followed by 3 more inputs, one for the player's score, their opponents score, and a bit for determining whether the player is dealer or not. The hope with encoding the players scores and the dealer as information is to make the network consider the opponent's score with their decision. This is especially important later in the game, as you want to especially make sure you minimize the opponent's score if they're on the verge of winning and the dealer, as this is when you can best minimize their score if they're on the verge of winning. The dealer bit also helps the agent know whether it's fine to discard cards that give points to the crib, as if they are the dealer, they'll get to score those points regardless. The cards in the input will always be sorted to introduce some consistency in the way the output is represented. 
 
-The output for the network will be 15 nodes. Each of these 15 nodes will correspond to the assumed reward for a certain pair of cards being discarded. This functions as our Bellman Equation, however because in our case there are no effects of the current decision on future rewards due to the way the game is played, I completely ignore computing the estimated reward of future states and instead use the output nodes as simply 
+The output for the network will be 15 nodes. Each of these 15 nodes will correspond to the assumed reward for a certain pair of cards being discarded. This functions as our Bellman Equation, however because in our case there are no effects of the current decision on future rewards due to the way the game is played, I completely ignore computing the estimated reward of future states and instead use the output nodes as simply the estimated reward, or score, of that specific hands. For the preliminary tests that I will run, this target score will be the score of the hand, however for the full game, this score will be the score of the agent, minus the score of the opponent, including a crib.
 
-Because of the learning nature of this project, I tried a few different approaches and also made a few preliminary benchmark tests.
+The hidden layers were chosen somewhat arbitrarily and were not able to be modified during tests due to time constraints, but were chosen to be four dense layers of 56, 56, 25 and 20 nodes each. 
 
-\subsection{Benchmarks}
+\section{Benchmarks}
 
 Before moving forward, I wanted to assess some benchmarks that I could aim towards. Namely, I wanted to answer some questions about how good naive players are at the game, so I could better assess the performance of my model later on. It's interesting to create a model that can learn to play a game, but it's not very useful to evaluate it's metrics unless there's something to compare it to. 
 
@@ -122,7 +122,25 @@ As seen in the results, a completely randomized network seems to perform about a
 
 One thing to note is that the average hand scores were done without a crib. This was just to avoid any external randomness from affecting the benchmark.
 
-\section{Experiments}
+\section{Experiments and Methodology}
+
+Because of the learning nature of this project, I made a few different attempts at this network structure using different learning methods to see the effects. One thing of note is that because of the incredibly stochastic nature of the game, accuracy and loss were not measured during training and loss was only used for the sake of backpropagation, as it doesn't offer any particularly useful information compared to other metrics like average hand score, the difference between the chosen hand score and the maximum score, or the ratio between the maximum score and the chosen hand score. The first two exploratory methods were not tracked during training and only had their metrics scored at the end of training by comparing the score ratio and score differences between the network and the naive approach to scoring for identical hands.  
+
+\subsection{Naive Method}
+
+The first attempt I made was naive training without applying exprience replay or network saving from Mnih et al\cite{deepmind_2015}. As expected, no difference was observed between the untrained network and the network after five hundred thousand training samples. 
+
+\subsection{Including Exploration}
+
+The second attempt I made was also naive training, however with exploration included, where the network while training will occasionally pick a random value from it's outputs instead of choosing it's known optimum\cite{drl_survey}. Again, this saw no observed change between the untrained network after five hundred thousand training samples. 
+
+\subsection{Full Training Without Crib}
+
+As a primary naive attempt, the first legitimate training was done by implementing experience replay by generating one thousand different hands and selecting randomly thirty two hands, then replaying the training on those hands fifteen times, replacing the network weights on each replay. The network also had a random chance of choosing a random output, starting at 0.8 and decaying by multiplying by 0.95 on each batch of thirty two randomly picked experiences. One thousand batches were run. This would mean that at the start of training, the network would be highly encouraged to explore different possibilities, but as training nears the end of the one thousand batches, the network should start to become more deterministic in choosing it's known optimum. Each experience replay had it's average score compared to the naive approach as explained above. To note is that this initial training run was done without an adversary, so without a crib. Therefore this was mostly a test to ensure the network could learn the game in it's most deterministic way; where you simply choose the highest scoring possible discards. The target for the output was the score for the particular hand combination resulting from that choice.
+
+\subsection{Full Training with Adversary}
+
+The final training was done exactly as above, however the training was instead done with an adversary, where the target values for the network were the difference between the adversary's score and the player's score, with a crib scored. The dealer was chosen was at random, and the adversary was the naive player as described above that had no regard for the crib when evaluating it's discards, with a different hand selected from the same pool of one thousand random hands. Again, the network was tested against a naive player who was given the same hand and had the score of the agent's chosen hand compared to the naive option's score with the crib included or excluded depending on whether they were randomly chosen as the dealer. Training results were separated into two different comparisons, one where the agent was the dealer, and another where they weren't, to more accurately evaluate whether the model was learning a difference between when they were the dealer or not compared to the naive option for discards.
 
 \section{Results}
 
@@ -130,6 +148,7 @@ One thing to note is that the average hand scores were done without a crib. This
 
 
 
+\newpage
 \bibliography{references}
 \bibliographystyle{ieeetr}
 \end{document}
