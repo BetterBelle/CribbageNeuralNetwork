@@ -3,6 +3,7 @@ __pycache__
 network*
 inputs.txt
 results.txt
+*.png
 
 ### ignores for latex document
 *.aux

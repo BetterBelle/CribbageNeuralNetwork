@@ -339,12 +339,26 @@ class NetworkPlayer(Player):
                 self._hand = Hand(hand.copy())
                 test_player = NaivePlayer()
                 test_player._hand = Hand(hand.copy())
-                test_player.select_discards(0, 0)
-                discards = self.select_discards(0, 0, True)
-                self._output_arr[self._chosen_arg] = self.hand.score
+                adversary = NaivePlayer()
+                adversary._hand = Hand(random.choice(hands).copy())
 
-                model_scores.append(self.hand.score)
-                tester_scores.append(test_player.hand.score)
+                dealer = random.randrange(0, 2)
+                tester_discards = test_player.select_discards(0, 0)
+                self_discards = self.select_discards(dealer, 0, True)
+                adversary_discards = adversary.select_discards(0, 0)
+
+
+                tester_crib = Hand(tester_discards + adversary_discards)
+                self_crib = Hand(self_discards + adversary_discards)
+
+                if dealer:
+                    self._output_arr[self._chosen_arg] = self.hand.score + self_crib.score - adversary.hand.score
+                    model_scores.append(self.hand.score + self_crib.score - adversary.hand.score)
+                    tester_scores.append(test_player.hand.score + tester_crib.score - adversary.hand.score)
+                else:
+                    self._output_arr[self._chosen_arg] = self.hand.score - self_crib.score - adversary.hand.score
+                    model_scores.append(self.hand.score - self_crib.score - adversary.hand.score)
+                    tester_scores.append(test_player.hand.score - tester_crib.score - adversary.hand.score)
 
                 outputs.append(self._output_arr)
 

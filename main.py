@@ -1,7 +1,11 @@
 from src.cribbage_game import CribbageGame
 import src.player as player
+import src.scoring as scoring
+import random
 import pickle
 import multiprocessing
+import numpy as np
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 
@@ -146,10 +150,85 @@ def network_init_test():
     print('Average Hand Difference: ', str(sum(score_diff) / len(score_diff)))
 
 
+def graph_results():
+    top_end = list()
+    predicted = list()
+    with open('results.txt') as f:
+        for line in f:
+            t, p = [float(i) for i in line.split(',')]
+            top_end.append(t)
+            predicted.append(p)
+
+    plt.plot(top_end, label='maximum score avg')
+    plt.plot(predicted, label='chosen score avg')
+    plt.xlabel('batch')
+    plt.ylabel('scores')
+    plt.title('Average Hand Scores per Batch During Training')
+    plt.legend()
+    plt.show()
+        
+
+def test_with_training_batch():
+    network = player.NetworkPlayer()
+    network.load_discard_model('network18.h5')
+    random_network = player.NetworkPlayer('baseline')
+    adversary = player.NaivePlayer('adversary')
+    tester = player.NaivePlayer()
+
+    network_scores = list()
+    tester_scores = list()
+    baseline = list()
+
+    with open('inputs.txt', 'rb') as f:
+        inputs = pickle.load(f)
+
+    randomly_chosen = random.sample(inputs, 10)
+
+    for hand in randomly_chosen:
+        network._hand = scoring.Hand(hand.copy())
+        tester._hand = scoring.Hand(hand.copy())
+        random_network._hand = scoring.Hand(hand.copy())
+        adversary._hand = scoring.Hand(random.choice(inputs))
+
+        dealer = random.randrange(0, 2)
+
+        random_discards = random_network.select_discards()
+        network_discards = network.select_discards(dealer=dealer)
+        tester_discards = tester.select_discards()
+        adversary_discards = adversary.select_discards()
+
+        tester_crib = scoring.Hand(adversary_discards + tester_discards)
+        network_crib = scoring.Hand(adversary_discards + network_discards)
+        random_crib = scoring.Hand(adversary_discards + random_discards)
+
+        if dealer:
+            baseline.append(random_network.hand.score + random_crib.score - adversary.hand.score)
+            network_scores.append(network.hand.score + network_crib.score - adversary.hand.score)
+            tester_scores.append(tester.hand.score + tester_crib.score - adversary.hand.score)
+        else:
+            baseline.append(random_network.hand.score - random_crib.score - adversary.hand.score)
+            network_scores.append(network.hand.score - network_crib.score - adversary.hand.score)
+            tester_scores.append(tester.hand.score - tester_crib.score - adversary.hand.score)
+
+    plt.plot(network_scores, label='network hand score')
+    plt.plot(tester_scores, label='naive hand score')
+    plt.plot(baseline, label='baseline hand score')
+    plt.xlabel('hand number')
+    plt.ylabel('scores')
+    plt.title('Hand Scores Over Training Samples')
+    plt.legend()
+    plt.show()
+
+    print(sum(network_scores) / len(network_scores))
+    print(sum(tester_scores) / len(tester_scores))
+    print(sum(baseline) / len(baseline))
+
 
 
 if __name__ == '__main__':
-    # vs_tester('network', 'naive')
     # network_init_test()
-    create_training_batch()
-    train_discards_solo()
+    # create_training_batch()
+    # train_discards_solo()
+    # vs_tester('network', 'naive')
+    # graph_results()
+    test_with_training_batch()

@@ -1,6 +1,9 @@
 \documentclass[]{article}
 \usepackage[table,xcdraw]{xcolor}
+\usepackage{graphicx}
 \usepackage{hyperref}
+
+\graphicspath{ {./} }
 
 \title{Reinforcement Learning Applied to Cribbage}
 \author{Danielle Cloutier}
@@ -11,7 +14,7 @@
 
 \section{Introduction}
 
-Cribbage is a card game, normally played between two players which is split into multiple phases of play\cite{cribbage_rules}. In this project, I attempted to create a neural network model that uses Deep Q-Learning to learn how to play the discard phase of the game. This decision is because the game's different phases essentially require completely different decision processes, which would likely require two separate agents to be trained somewhat in tandem and would require far more computational power than I possess to train. This network was trained in a multitude of different ways to verify certain methods that have been used by others not only for cribbage, but also for other games. 
+Cribbage is a card game, normally played between two players which is split into multiple phases of play\cite{cribbage_rules}. In this project, I attempted to create a neural network model that uses Deep Q-Learning to learn how to play the discard phase of the game. This decision is because the game's different phases essentially require completely different decision processes, which would likely require two separate agents to be trained somewhat in tandem and would require far more computational power than I possess to train. This network was trained in a multitude of different ways to verify certain methods that have been used by others for other games. 
 
 \subsection{Reinforcement Learning and Deep Q-Learning}
 
@@ -33,7 +36,7 @@ The form of cribbage that I'll be implementing and creating this network for is 
     \item Dealer shuffles the cards 
     \item Non-dealer cuts the cards 
     \item Dealer deals 6 cards to each player one at a time 
-    \item Both players discard two cards from their hand. These four cards go into what's called the "crib"
+    \item Both players discard two cards from their hand. These four cards discarded by the players go into what's called the "crib"
     \item The non-dealer then cuts the deck, and the top card is turned face up. This card counts for when the pegging phase is done towards all hands, including the crib. If the card turned up is a Jack, the dealer scores 2 points. This card is called the "start card"
     \item Players take turns playing during what's often referred as the "pegging" phase 
     \item Once the pegging phase is done, the hands are scored in order non-dealer, then dealer, then the crib is scored for the dealer
@@ -41,7 +44,7 @@ The form of cribbage that I'll be implementing and creating this network for is 
 
 This is repeated, alternating the dealer between both players until one player reaches 121 points or more. If at any point during scoring a player reaches 121 points or more, play is stopped and that player is declared the winner. This holds true even if it's during the pegging phase, meaning a player can lose even before their hand is scored \cite{cribbage_rules}\cite{cribbage_rules_montana}. One thing to note is that every card uses the value on its face for all purposes where adding is necessary except for face cards; the Ace is worth 1, and all other face cards are worth the value 10. 
 
-Because this project only deals with the scoring phase, I'll not be describing the scoring rules for the pegging phase. In my modified version of the game, everything remains the same, however there will be no pegging phase. During scoring the rules are as follows: 
+Because this project only deals with the scoring phase, I'll not be describing the scoring rules for the pegging phase. In my modified version of the game, everything remains the same, however there will be no pegging phase, and no start card will be used as this introduces even more unnecessary randomness that is completely irrelevant to the decision making process. During scoring the rules are as follows: 
 
 \begin{enumerate}
     \item Any combination of cards adding up to 15 scores 2 points. For example a Jack and Five count as fifteen, but so do a Four, Five and Six. As a more specific example, a hand of Four, Five(1), Five(2), Six would contain 4 points worth of 15s. These are the combinations Four, Five(1), Six as well as the second trio of Four, Five(2), Six. 
@@ -65,11 +68,9 @@ There is also a genetic algorithm that was applied to cribbage by Graham Kendall
 
 \section{Network Structure}
 
-With all of these requirements done, I can now begin my approach to codify the network. 
-
 The input for the network is relatively straightfoward as it contains a one-hot encoding of the six cards in the player's hand consisting of 318 nodes, followed by 3 more inputs, one for the player's score, their opponents score, and a bit for determining whether the player is dealer or not. The hope with encoding the players scores and the dealer as information is to make the network consider the opponent's score with their decision. This is especially important later in the game, as you want to especially make sure you minimize the opponent's score if they're on the verge of winning and the dealer, as this is when you can best minimize their score if they're on the verge of winning. The dealer bit also helps the agent know whether it's fine to discard cards that give points to the crib, as if they are the dealer, they'll get to score those points regardless. The cards in the input will always be sorted to introduce some consistency in the way the output is represented. 
 
-The output for the network will be 15 nodes. Each of these 15 nodes will correspond to the assumed reward for a certain pair of cards being discarded. This functions as our Bellman Equation, however because in our case there are no effects of the current decision on future rewards due to the way the game is played, I completely ignore computing the estimated reward of future states and instead use the output nodes as simply the estimated reward, or score, of that specific hands. For the preliminary tests that I will run, this target score will be the score of the hand, however for the full game, this score will be the score of the agent, minus the score of the opponent, including a crib.
+The output for the network will be fifteen nodes, each corresponding to the assumed reward for a certain pair of cards being discarded, as in the $6 \choose 2$ possible combinations of cards that can be discarded. These outputs are where we'll apply the Bellman Equation, however because in our case there are no effects of the current decision on future rewards due to the way the game is played, I completely ignore computing the estimated reward of future states and instead use the output nodes as simply the estimated reward, or score, of that specific hand state and action combination. For the preliminary tests that I will run, this target score will be the score of the hand, however for the full game, this score will be the score of the agent, minus the score of the opponent, with the crib adding or subracting score depending on whether the agent is the dealer or not.
 
 The hidden layers were chosen somewhat arbitrarily and were not able to be modified during tests due to time constraints, but were chosen to be four dense layers of 56, 56, 25 and 20 nodes each. 
 
@@ -140,12 +141,82 @@ As a primary naive attempt, the first legitimate training was done by implementi
 
 \subsection{Full Training with Adversary}
 
-The final training was done exactly as above, however the training was instead done with an adversary, where the target values for the network were the difference between the adversary's score and the player's score, with a crib scored. The dealer was chosen was at random, and the adversary was the naive player as described above that had no regard for the crib when evaluating it's discards, with a different hand selected from the same pool of one thousand random hands. Again, the network was tested against a naive player who was given the same hand and had the score of the agent's chosen hand compared to the naive option's score with the crib included or excluded depending on whether they were randomly chosen as the dealer. Training results were separated into two different comparisons, one where the agent was the dealer, and another where they weren't, to more accurately evaluate whether the model was learning a difference between when they were the dealer or not compared to the naive option for discards.
+The final training was done exactly as above, however the training was instead done with an adversary, where the target values for the network were the difference between the adversary's score and the player's score, with a crib scored. The dealer was chosen was at random, and the adversary was the naive player as described above that had no regard for the crib when evaluating it's discards, with a different hand selected from the same pool of one thousand random hands. Again, the network was tested against a naive player who was given the same hand and had the score of the agent's chosen hand compared to the naive option's score with the crib included or excluded depending on whether they were randomly chosen as the dealer. Training results were not split into "dealer" and "not dealer" results, because the model being trained would be expected to have better scores over time irrespective of whether they were the dealer compared to the naive player over time as long as they're learning.
 
 \section{Results}
 
-\section{Future Work}
+To determine results of the two main training methodologies I supply three different metrics: 
+\begin{enumerate}
+    \item The average score of hands during training compared to the naive optimum 
+    \item The results when playing against a naive player in a full modified game (without the pegging phase)
+    \item The optimized score of each hand post training compared to the naive optimum and a baseline random network
+\end{enumerate}
 
+For the third metric, because one training phase was without a crib and the other was trained including a crib, I decided again to select a random hand from the one thousand training samples, giving it to a naive player and testing the network and tester (another naive player, with the same hand as the network) and comparing their scores. This was only for the results for the network trained with a crib. 
+
+\subsection{Full Training Without Crib}
+
+Unfortunately this did not achieve any visibly positive results. Over the one thousand training batches, the network appears to have not learned anything about the game as over the one thousand training batches, there was no significant change in the average score by the network, as shown in Figure \ref{fig:training_nocrib}.
+
+\begin{figure}[h]
+    \caption{Hand Scores During Training Without Crib}\label{fig:training_nocrib}
+    \includegraphics[width=11cm]{OriginalTraining.png}
+\end{figure}
+
+
+When playing against a naive player in a one thousand game match, the results were 942 wins for the naive agent and 58 for the trained network, which is very similar to when it was untrained. Because of the relatively small batch of games played and lack of computational resources to test for any larger batch sizes, it's unclear if this small improvement is due to learning or randomness. 
+
+When testing the network against a baseline randomly weighted network and against a naive approach over a randomly chosen batch of ten hands from the original batch of one thousand used for training, there seems to have been no improvement. When evaluating the average hand scores of each of these over the entire one thousand hand batch, there also appears to have been no improvement over the randomly assigned network and the trained network. In fact, the network seemed to have gotten worse compared to a randomly weighted network on it's own training set, as seen in Figure \ref{fig:hand_scores_nocrib}.
+
+\begin{figure}
+    \caption{Hand Scores over 10 games chosen from training sample and average scores over all 1000 samples}\label{fig:hand_scores_nocrib}
+
+    \includegraphics[width=11cm]{HandScoresBatch_Crib.png}
+    \begin{itemize}
+        \item Trained Network Average Score: 2.284
+        \item Naive Player Average Score: 5.638
+        \item Untrained Network Average Score: 2.457
+    \end{itemize}
+
+\end{figure}
+
+\subsection{Full Training With Crib}
+
+Once again, this did not achieve any visibly positive results. Over the one thousand training batches, the network appears to have not learned anything about the game as over the one thousand training batches, there was no significant change in the average score by the network even when including a crib as seen in Figure \ref{fig:training_crib}.
+
+\begin{figure}
+    \caption{Hand Scores During Training With Crib}\label{fig:training_crib}
+
+    \includegraphics[width=11cm]{CribTraining.png}
+\end{figure}
+
+When playing against a naive player in a one thousand game match, the results were 970 wins for the naive agent and 30 for the trained network, which is very similar to when it was untrained. Because of the relatively small batch of games played and lack of computational resources to test for any larger batch sizes, it seems unclear whether the network did get worse or if this is simply due to the random nature of the game.
+
+However, when testing the network against a baseline randomly weighted network and a naive approach over a randomly chosen batch of ten hands from the original batch of one thousand used for training, the network seems to be underperforming compared to a randomly weighted network on it's own training set. This is even more apparent when looking at the average scores over the entire batch of one thousand hands, where the trained network achieves an average score of -3.3, compared to 1.3 for the naive approach and -0.8 for the untrained network as seen in Figure \ref{fig:hand_scores_crib}.
+
+\begin{figure}
+    \caption{Hand Scores over 10 games chosen from training sample and average scores over all 1000 samples}\label{fig:hand_scores_crib}
+
+    \includegraphics[width=11cm]{HandScoresBatch_Crib.png}
+    \begin{itemize}
+        \item Trained Network Average Score: -3.3
+        \item Naive Player Average Score: 1.3
+        \item Untrained Network Average Score: -0.8
+    \end{itemize}
+
+\end{figure}
+
+\section{Thoughts and Future Work}
+
+Because of the relatively simple rules of the game that can be learned by an adult human with relative ease, I originally thought that not much training would be needed to achieve a result that was at least better than completely random play. However, it does appear that significantly more training and perhaps a more rigorous training method would be required. I suspect that the extremely random nature of the game of cribbage caused issues during training, as there are going to be inconsistencies in output even with the same input, due to the opponent's hand being hidden. Sometimes an identical hand can give completely different scores, even when both are dealt as the dealer. This phenomenon could very well explain why the network got worse over training, it likely diverged from the intended solution as explained in \cite{temp_diff_analysis} where nonlinear function approximators for Q-Learning can diverge. 
+
+There could also be issues with the actual network structure itself. The network structure is completely static and one dimensional, but perhaps treating the input as two dimensional with convolution and dropout layers could be a better approach. Dropout layers especially may be of use because of the randomness introduced by the game\cite{dropout}. Because of the network's tendency to overfit and the fact that the random nature of the game makes this incredibly detrimental, dropout layers could help to mitigate this effect. 
+
+Maybe even some different approaches to the outputs could be used. For example, an approach using an encoding of the entire deck with rewards per node for being chosen and selecting the top two that are in the input hand could be used. This would of course require a different reward mechanism still tied to the game scores, but perhaps more complex. A similar method where every output node would also have a reward tied to it regardless of choice could also help with improving learning speed, if such an approach could be created that seemed sensible. 
+
+An issue with the current model is that only one node's target can be modified per training session, because the reward for other nodes are unknown until they've been chosen. Perhaps the training could be modified to change the target of all of the output nodes at the same time, once the cards in the crib are known in order to speed up training. This would of course mean the network would no longer be playing the game to learn, but instead would be conceived more as the agent getting a hand and viewing the results of every possible choice they could make during training. Again, because of the random nature of the game, it's unclear whether this could even function correctly, as the same input could have multiple different "best" outputs depending on the opponent's hand, which is hidden.
+
+There could also be room for improvement on the current network structure by simply tuning hyperparameters, using different loss functions, trying different exploration incentives, and so on. In the end, although this project did not achieve great performance, there is most definitely room for improvement not only in tuning this methodology's hyperparameters, but also in testing out other network structures.
 
 
 \newpage
